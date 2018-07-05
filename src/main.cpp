@@ -5,18 +5,21 @@
 #include "..\resources\Adafruit_LSM9DS1.h"
 #include "..\resources\Adafruit_LSM9DS1.cpp"
 #include <math.h>
+// including all of the necessary libraries
 //#include "..\resources\Adafruit_Sensor.h"
 //#include "..\resources\Adafruit_LSM9DS1.h"
 #define LED3 12
 
 Adafruit_LSM9DS1 lsm = Adafruit_LSM9DS1();
 int x = 500;
+// nvm that value
 void setup() {
     // put your setup code here, to run once:
     // the main code that is very similar to the arduino code
     Serial.begin(9600);
 
     Serial.println("Welcome to the traffic system!");
+    // seeing if the sensor works and is connected correctly
     if(!lsm.begin())
   {
     /* There was a problem detecting the LSM9DS1 ... check your connections */
@@ -25,6 +28,7 @@ void setup() {
   }
   else{
     Serial.println("Success!");
+    // setting up acceleration, magnetism and gyro
     lsm.setupAccel(lsm.LSM9DS1_ACCELRANGE_2G);
     //lsm.setupAccel(lsm.LSM9DS1_ACCELRANGE_4G);
     //lsm.setupAccel(lsm.LSM9DS1_ACCELRANGE_8G);
@@ -41,6 +45,7 @@ void setup() {
     //lsm.setupGyro(lsm.LSM9DS1_GYROSCALE_500DPS);
     //lsm.setupGyro(lsm.LSM9DS1_GYROSCALE_2000DPS);
     pinMode(LED3, OUTPUT);
+    // pin mode for a led light to caclulate acceleration
   }
 
 
@@ -53,12 +58,16 @@ void loop() {
   //digitalWrite(LED, HIGH)
 
 
-  lsm.read();  /* ask it to read in the data */
+  lsm.read();  /* ask it to read in the data for this code */
 
   /* Get a new sensor event */
+
+
   sensors_event_t a, m, g, temp;
 
   lsm.getEvent(&a, &m, &g, &temp);
+  // getthing even of each sensor, and each one will have it's own values
+
 
   Serial.print("Accel X: "); Serial.print(a.acceleration.x); Serial.print(" m/s^2");
   Serial.print("\tY: "); Serial.print(a.acceleration.y);     Serial.print(" m/s^2 ");
@@ -69,8 +78,10 @@ void loop() {
   float xAndy = sqrtf(accX + accY);
   float xyA = xAndy * xAndy;
   float result = sqrtf(xyA + accZ);
+  // creating total 3-d acceleration vector that finds net acceleration for the sensor, should be 9.8 to 9.9 at rest noramlly
+
   Serial.print("The 3-d vector for acceleration is: "); Serial.print(result); Serial.println("m/s^2 ");
-  if(result>10){
+  if(result>11){
     Serial.print("Slow down please!"  );
     digitalWrite(LED3, HIGH);
 
@@ -78,7 +89,7 @@ void loop() {
   else{
     digitalWrite(LED3, LOW);
   }
-
+  // printing out all of the values
   Serial.print("Magnetic field X: "); Serial.print(m.magnetic.x);   Serial.print(" gauss");
   Serial.print("\tY: "); Serial.print(m.magnetic.y);     Serial.print(" gauss");
   Serial.print("\tZ: "); Serial.print(m.magnetic.z);     Serial.println(" gauss");
@@ -89,6 +100,7 @@ void loop() {
 
   Serial.println();
   Serial.println();
+  // calculate the acceleration, magnetism, and gyro every second 
   delay(1000);
     // put your main code here, to run repeatedly:
 }

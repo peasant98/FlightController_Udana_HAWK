@@ -1,3 +1,16 @@
+Matthew Strong
+CU Boulder 2021 Computer Science
+
+The following code in this repository will use an Adafruit Sensor to calculate
+the acceleration, magnetism, and gyro when the code runs. There is a simple LED light that will light up
+when the acceleration vector of x, y, and z is higher than 10m/s^2.
+
+The code here is pretty straightforward, there is a class for this sensor and this class
+requires the Adafruit_Sensor header file, which can be applied to other adafruit sensors, not just the
+lsm9ds1 one that I have. With this code, and once a connection can be established, the code will actually be able to run.
+
+
+
 
 This directory is intended for the project specific (private) libraries.
 PlatformIO will compile them to static libraries and link to executable file.
