@@ -71,7 +71,7 @@ void loop() {
   float result = sqrtf(xyA + accZ);
   Serial.print("The 3-d vector for acceleration is: "); Serial.print(result); Serial.println("m/s^2 ");
   if(result>10){
-    Serial.print("Slow down!"  );
+    Serial.print("Slow down please!"  );
     digitalWrite(LED3, HIGH);
 
   }
