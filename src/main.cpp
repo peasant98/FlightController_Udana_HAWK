@@ -9,6 +9,10 @@
 #include "..\resources\Adafruit_LSM9DS1.cpp"
 #include <math.h>
 
+
+// written by Matthew Strong, sophomore at CU Boulder
+
+
 // I will create the PID controller and algorithm for handling the necessary aspects here
 // and add the code here (the Adafruit LSM9DSL) is already working perfectly here
 
@@ -29,7 +33,9 @@ Servo esc1, esc2, esc3, esc4;
 
 char data;
 // define any necessary pins here
- void test();
+
+// declaring functions in advance
+void test();
  void displayInstructions();
 //Motor 1 : front left - clockwise
 //Motor 2 : front right - counter-clockwise
@@ -72,15 +78,15 @@ void setup() {
     lsm.setupGyro(lsm.LSM9DS1_GYROSCALE_245DPS);
     //lsm.setupGyro(lsm.LSM9DS1_GYROSCALE_500DPS);
     //lsm.setupGyro(lsm.LSM9DS1_GYROSCALE_2000DPS);
-    pinMode(LED3, OUTPUT);
-    pinMode(LED2, OUTPUT);
-    pinMode(LED1, OUTPUT);
-    pinMode(LED0, OUTPUT);
+    //pinMode(LED3, OUTPUT);
+    //pinMode(LED2, OUTPUT);
+    //pinMode(LED1, OUTPUT);
+    //pinMode(LED0, OUTPUT);
 
-    esc1.attach(9, MIN_PULSE_LENGTH, MAX_PULSE_LENGTH);
-    esc2.attach(10, MIN_PULSE_LENGTH, MAX_PULSE_LENGTH);
-    esc3.attach(11, MIN_PULSE_LENGTH, MAX_PULSE_LENGTH);
-    esc4.attach(12, MIN_PULSE_LENGTH, MAX_PULSE_LENGTH);
+    esc1.attach(10, MIN_PULSE_LENGTH, MAX_PULSE_LENGTH);
+    esc2.attach(9, MIN_PULSE_LENGTH, MAX_PULSE_LENGTH);
+    esc3.attach(12, MIN_PULSE_LENGTH, MAX_PULSE_LENGTH);
+    esc4.attach(11, MIN_PULSE_LENGTH, MAX_PULSE_LENGTH);
 
     Serial.println("Calbrations...");
     displayInstructions();
@@ -101,6 +107,8 @@ void displayInstructions()
 
 
 void findPID(){
+
+
 
 }
 
@@ -225,6 +233,27 @@ void loop() {
 }
 
 
+void calibrateESC(){
+  esc1.writeMicroseconds(MAX_PULSE_LENGTH);
+  esc2.writeMicroseconds(MAX_PULSE_LENGTH);
+  esc3.writeMicroseconds(MAX_PULSE_LENGTH);
+  esc4.writeMicroseconds(MAX_PULSE_LENGTH);
+  delay(5000);
+  // wait 5 seconds before anything can happen
+
+  Serial.print("Preparing to send min pulse for arming sequence...");
+
+  esc1.writeMicroseconds(MIN_PULSE_LENGTH);
+  esc2.writeMicroseconds(MIN_PULSE_LENGTH);
+  esc3.writeMicroseconds(MIN_PULSE_LENGTH);
+  esc4.writeMicroseconds(MIN_PULSE_LENGTH);
+  delay(1000);
+  Serial.print("Hopefully all four escs should be calibrated...");
+  // 1 second delay should enable the esc to know where the max and min pulse are each at....
+
+}
+
+
 
 void test()
 {
@@ -241,8 +270,15 @@ void test()
     }
 
     Serial.println("STOP");
+    // going back to writing minimum pulse length
     esc1.writeMicroseconds(MIN_PULSE_LENGTH);
     esc2.writeMicroseconds(MIN_PULSE_LENGTH);
     esc3.writeMicroseconds(MIN_PULSE_LENGTH);
     esc4.writeMicroseconds(MIN_PULSE_LENGTH);
+}
+
+
+
+void readData(){
+  
 }
