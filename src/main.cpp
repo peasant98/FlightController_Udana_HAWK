@@ -72,11 +72,19 @@ char data;
 
 Adafruit_LSM9DS1 lsm = Adafruit_LSM9DS1();
 
+float gyroArr[4], accelerationArr[4];
+float rollCalibration, pitchCalibration, yawCalibration;
+
+int startingCode;
+// some arrays to keep track of gyro and acceleration so far
+
 // define any necessary pins here
 
 // declaring functions in advance
 void test();
 void displayInstructions();
+void readData();
+void calibrateESC();
 //Motor 1 : front left - clockwise
 //Motor 2 : front right - counter-clockwise
 //Motor 3 : rear left - clockwise
@@ -125,8 +133,20 @@ void setup() {
 
     // need to calibrate the gyros when the drone is stationary
     for(int i = 0; i< 2000; i++){
+      readData();
+      rollCalibration = rollCalibration + gyroArr[0];
+      pitchCalibration = pitchCalibration + gyroArr[1];
+      yawCalibration = yawCalibration + gyroArr[2];
+      delay(4);
+      // adding up all of the totals so that we can get the average
+      // read the data and put the infomration into an array that is basically global to the whole program....
 
     }
+    rollCalibration = rollCalibration/2000;
+    pitchCalibration = pitchCalibration/2000;
+    yawCalibration = yawCalibration/2000;
+    // getting the averages of everything thus far
+
 
 
 
@@ -136,6 +156,10 @@ void setup() {
     esc4.attach(11, MIN_PULSE_LENGTH, MAX_PULSE_LENGTH);
 
     Serial.println("Calbrations...");
+    batteryVoltage = (analogRead(0) + 65) * 1.2317;
+
+    // now for calbrating and arming the escs (one still doesn't work..)
+    calibrateESC();
     displayInstructions();
     // setting up all of the lights based on the direction that is selected by the user
     // pin mode for a led light to caclulate acceleration
@@ -154,6 +178,20 @@ void displayInstructions()
 
 
 void findPID(){
+  pidErrorTemp = rollInputGyro - rollSetpoint;
+  // calculating the big boy, the p, which accounts for the most work
+  // roll error, input - what we actually want
+  iMemRoll += IgainRoll * pidErrorTemp;
+  // accounting for too high intergral roll
+  if(iMemRoll > pidMaxRoll){
+    iMemRoll = pidMaxRoll;
+  }
+  else if(iMemRoll < (pidMaxRoll*-1)){
+    iMemRoll = (pidMaxRoll * -1);
+  }
+
+  pidRollOutput = PgainRoll * pidErrorTemp + iMemRoll + DgainRoll * (pidErrorTemp - pidLastRoll_D_Error);
+
   // ahh. The most important of them all.
 
 
@@ -166,7 +204,6 @@ void loop() {
 
   if (Serial.available()) {
         data = Serial.read();
-
         switch (data) {
             // 0
             case 48 : Serial.println("Sending minimum throttle");
@@ -175,7 +212,6 @@ void loop() {
                       esc3.writeMicroseconds(MIN_PULSE_LENGTH);
                       esc4.writeMicroseconds(MIN_PULSE_LENGTH);
             break;
-
             // 1
             case 49 : Serial.println("Sending maximum throttle");
                       esc1.writeMicroseconds(MAX_PULSE_LENGTH);
@@ -285,10 +321,10 @@ void calibrateESC(){
   esc2.writeMicroseconds(MAX_PULSE_LENGTH);
   esc3.writeMicroseconds(MAX_PULSE_LENGTH);
   esc4.writeMicroseconds(MAX_PULSE_LENGTH);
-  delay(5000);
+  Serial.print("Preparing to send min pulse for arming sequence... Plug in the battery now.");
+  delay(4000);
   // wait 5 seconds before anything can happen
 
-  Serial.print("Preparing to send min pulse for arming sequence...");
 
   esc1.writeMicroseconds(MIN_PULSE_LENGTH);
   esc2.writeMicroseconds(MIN_PULSE_LENGTH);
@@ -336,27 +372,45 @@ void readData(){
   Serial.print("Accel X: "); Serial.print(a.acceleration.x); Serial.print(" m/s^2");
   Serial.print("\tY: "); Serial.print(a.acceleration.y);     Serial.print(" m/s^2 ");
   Serial.print("\tZ: "); Serial.print(a.acceleration.z);     Serial.println(" m/s^2 ");
+
   float accX = a.acceleration.x * a.acceleration.x;
   float accY = a.acceleration.y * a.acceleration.y;
   float accZ = a.acceleration.z * a.acceleration.z;
   float xAndy = sqrtf(accX + accY);
   float xyA = xAndy * xAndy;
-  float result = sqrtf(xyA + accZ);
+  float accelerationResult = sqrtf(xyA + accZ);
+  accelerationArr[0] = a.acceleration.x;
+  accelerationArr[1] = a.acceleration.y;
+  accelerationArr[2] = a.acceleration.z;
+  accelerationArr[3] = accelerationResult;
+
   // creating total 3-d acceleration vector that finds net acceleration for the sensor, should be 9.8 to 9.9 at rest noramlly
 
-  Serial.print("The 3-d vector for acceleration is: "); Serial.print(result); Serial.println("m/s^2 ");
+  Serial.print("The 3-d vector for acceleration is: "); Serial.print(accelerationResult); Serial.println("m/s^2 ");
 
   // printing out all of the values
   Serial.print("Magnetic field X: "); Serial.print(m.magnetic.x);   Serial.print(" gauss");
   Serial.print("\tY: "); Serial.print(m.magnetic.y);     Serial.print(" gauss");
   Serial.print("\tZ: "); Serial.print(m.magnetic.z);     Serial.println(" gauss");
 
+
+
   Serial.print("Roll: "); Serial.print(g.gyro.x);   Serial.print(" dps");
   Serial.print("Pitch: "); Serial.print(g.gyro.y);      Serial.print(" dps");
   Serial.print("Yaw: "); Serial.print(g.gyro.z);      Serial.println(" dps");
-
+  float gyroX = g.gyro.x * g.gyro.x;
+  float gyroY = g.gyro.y * g.gyro.y;
+  float gyroZ = g.gyro.z * g.gyro.z;
+  float xY = sqrtf(gyroX+gyroY);
+  float xYNet = xY * xY;
+  float gyroResult = sqrtf(xYNet + gyroZ);
+  gyroArr[0] = g.gyro.x;
+  gyroArr[1] = g.gyro.y;
+  gyroArr[2] = g.gyro.z;
+  gyroArr[3] = gyroResult;
   Serial.println();
   Serial.println();
+  // just printing some extra lines here
 
 
 
