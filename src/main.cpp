@@ -130,7 +130,7 @@ void setup() {
     //pinMode(LED2, OUTPUT);
     //pinMode(LED1, OUTPUT);
     //pinMode(LED0, OUTPUT);
-
+    startingCode = 0;
     // need to calibrate the gyros when the drone is stationary
     for(int i = 0; i< 2000; i++){
       readData();
@@ -145,6 +145,7 @@ void setup() {
     rollCalibration = rollCalibration/2000;
     pitchCalibration = pitchCalibration/2000;
     yawCalibration = yawCalibration/2000;
+    // will account for this as the drone is moving
     // getting the averages of everything thus far
 
 
@@ -161,6 +162,7 @@ void setup() {
     // now for calbrating and arming the escs (one still doesn't work..)
     calibrateESC();
     displayInstructions();
+    // all steps before doing anything
     // setting up all of the lights based on the direction that is selected by the user
     // pin mode for a led light to caclulate acceleration
   }
@@ -178,6 +180,7 @@ void displayInstructions()
 
 
 void findPID(){
+
   pidErrorTemp = rollInputGyro - rollSetpoint;
   // calculating the big boy, the p, which accounts for the most work
   // roll error, input - what we actually want
@@ -189,11 +192,53 @@ void findPID(){
   else if(iMemRoll < (pidMaxRoll*-1)){
     iMemRoll = (pidMaxRoll * -1);
   }
-
   pidRollOutput = PgainRoll * pidErrorTemp + iMemRoll + DgainRoll * (pidErrorTemp - pidLastRoll_D_Error);
+  if(pidRollOutput > pidMaxRoll){
+    pidRollOutput = pidMaxRoll;
+  }
+  else if(pidRollOutput < (pidMaxRoll * -1)){
+    pidRollOutput = (pidMaxRoll * -1);
+  }
+  pidLastRoll_D_Error = pidErrorTemp;
 
+  // end of pitch. If we lived in a one-dimensional world, we would be done.
+  // but alas, we are not!
+
+  pidErrorTemp = pitchInputGyro - pitchSetpoint;
+  iMemPitch += IgainPitch * pidErrorTemp;
+  // the intergral pitch is the gain multiplied by the error so far
+
+  if(iMemPitch > pidMaxPitch){
+    iMemPitch = pidMaxPitch;
+  }
+  else if(iMemPitch < (pidMaxPitch*-1)){
+    iMemPitch = (pidMaxPitch * -1);
+  }
+  pidPitchOutput = PgainPitch * pidErrorTemp + iMemPitch + DgainPitch * (pidErrorTemp - pidLastPitch_D_Error);
+  if(pidPitchOutput > pidMaxPitch){
+    pidPitchOutput = pidMaxPitch;
+  }
+  else if(pidPitchOutput < (pidMaxPitch * -1)){
+    pidPitchOutput = (pidMaxPitch * -1);
+  }
+
+  pidLastPitch_D_Error = pidErrorTemp;
+
+  pidErrorTemp = yawInputGyro - yawSetpoint;
+  iMemYaw += IgainYaw * pidErrorTemp;
+  if(iMemYaw > pidMaxYaw){
+    iMemYaw = pidMaxYaw;
+  }
+  else if(iMemYaw < (pidMaxYaw*-1)){
+    iMemYaw = (pidMaxYaw*-1);
+  }
+  pidYawOutput = PgainYaw * pidErrorTemp + iMemPitch * (pidErrorTemp - pidLastYaw_D_Error);
+  pidLastYaw_D_Error = pidErrorTemp;
   // ahh. The most important of them all.
-
+  // the most import outputs are :
+  // pidYawOutput
+  // pidRollOutput
+  // pidPitchOutput
 
 }
 
