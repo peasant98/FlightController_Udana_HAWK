@@ -29,20 +29,60 @@
 #define LED2 7
 #define LED1 6
 #define LED0 5
+
+// these are arbitrary values that will be changed later
+
+
+// p, i, and d settings for the roll
+float PgainRoll = 1.4;
+float IgainRoll = 0.04;
+float DgainRoll = 18.0;
+// maximum output of the controller
+int pidMaxRoll = 400;
+
+// p, i, and d settings for the pitch
+float PgainPitch = PgainRoll;
+float IgainPitch = IgainRoll;
+float DgainPitch = DgainRoll;
+int pidMaxPitch = pidMaxRoll;
+
+// p, i, and d settings for the yaw
+float PgainYaw = 4.0;
+float IgainYaw = 0.02;
+float DgainYaw = 0.0;
+
+int pidMaxYaw = pidMaxRoll;
+
+
+// boolean leveling = true;
+int accelerationX, accelerationY, accelerationZ, accelerationNet;
+int throttle, batteryVoltage;
+
+float pidErrorTemp;
+float iMemRoll, iMemPitch, iMemYaw;
+float rollSetpoint, pitchSetpoint, yawSetpoint;
+float rollInputGyro, pitchInputGyro, yawInputGyro;
+float pidRollOutput, pidPitchOutput, pidYawOutput;
+float pidLastRoll_D_Error, pidLastPitch_D_Error, pidLastYaw_D_Error;
+
 Servo esc1, esc2, esc3, esc4;
 
 char data;
+
+
+Adafruit_LSM9DS1 lsm = Adafruit_LSM9DS1();
+
 // define any necessary pins here
 
 // declaring functions in advance
 void test();
- void displayInstructions();
+void displayInstructions();
 //Motor 1 : front left - clockwise
 //Motor 2 : front right - counter-clockwise
 //Motor 3 : rear left - clockwise
 //Motor 4 : rear left - counter-clockwise
 // each one connected as an esc using the Servo library
-Adafruit_LSM9DS1 lsm = Adafruit_LSM9DS1();
+
 
 // here I will declare all of the 'global' variables that I will be able to use in the setup loop,
 // the loop loop, and any other supporting functions that I need
@@ -83,6 +123,13 @@ void setup() {
     //pinMode(LED1, OUTPUT);
     //pinMode(LED0, OUTPUT);
 
+    // need to calibrate the gyros when the drone is stationary
+    for(int i = 0; i< 2000; i++){
+
+    }
+
+
+
     esc1.attach(10, MIN_PULSE_LENGTH, MAX_PULSE_LENGTH);
     esc2.attach(9, MIN_PULSE_LENGTH, MAX_PULSE_LENGTH);
     esc3.attach(12, MIN_PULSE_LENGTH, MAX_PULSE_LENGTH);
@@ -107,7 +154,7 @@ void displayInstructions()
 
 
 void findPID(){
-
+  // ahh. The most important of them all.
 
 
 }
@@ -280,5 +327,48 @@ void test()
 
 
 void readData(){
-  
+  sensors_event_t a, m, g, temp;
+
+  lsm.getEvent(&a, &m, &g, &temp);
+  // getthing even of each sensor, and each one will have it's own values
+
+
+  Serial.print("Accel X: "); Serial.print(a.acceleration.x); Serial.print(" m/s^2");
+  Serial.print("\tY: "); Serial.print(a.acceleration.y);     Serial.print(" m/s^2 ");
+  Serial.print("\tZ: "); Serial.print(a.acceleration.z);     Serial.println(" m/s^2 ");
+  float accX = a.acceleration.x * a.acceleration.x;
+  float accY = a.acceleration.y * a.acceleration.y;
+  float accZ = a.acceleration.z * a.acceleration.z;
+  float xAndy = sqrtf(accX + accY);
+  float xyA = xAndy * xAndy;
+  float result = sqrtf(xyA + accZ);
+  // creating total 3-d acceleration vector that finds net acceleration for the sensor, should be 9.8 to 9.9 at rest noramlly
+
+  Serial.print("The 3-d vector for acceleration is: "); Serial.print(result); Serial.println("m/s^2 ");
+
+  // printing out all of the values
+  Serial.print("Magnetic field X: "); Serial.print(m.magnetic.x);   Serial.print(" gauss");
+  Serial.print("\tY: "); Serial.print(m.magnetic.y);     Serial.print(" gauss");
+  Serial.print("\tZ: "); Serial.print(m.magnetic.z);     Serial.println(" gauss");
+
+  Serial.print("Roll: "); Serial.print(g.gyro.x);   Serial.print(" dps");
+  Serial.print("Pitch: "); Serial.print(g.gyro.y);      Serial.print(" dps");
+  Serial.print("Yaw: "); Serial.print(g.gyro.z);      Serial.println(" dps");
+
+  Serial.println();
+  Serial.println();
+
+
+
+  // calculate the acceleration, magnetism, and gyro every second
+
+  // maybe use this delay for later....
+  //delay(1000);
+    // put your main code here, to run repeatedly:
+
+
+
+
+
+
 }
