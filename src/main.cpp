@@ -32,7 +32,7 @@
 
 // these are arbitrary values that will be changed later
 
-
+//
 // p, i, and d settings for the roll
 float PgainRoll = 1.4;
 float IgainRoll = 0.04;
@@ -56,7 +56,8 @@ int pidMaxYaw = pidMaxRoll;
 
 // boolean leveling = true;
 int accelerationX, accelerationY, accelerationZ, accelerationNet;
-int throttle, batteryVoltage;
+int throttle;
+float batteryVoltage;
 
 float pidErrorTemp;
 float iMemRoll, iMemPitch, iMemYaw;
@@ -67,6 +68,8 @@ float pidLastRoll_D_Error, pidLastPitch_D_Error, pidLastYaw_D_Error;
 
 Servo esc1, esc2, esc3, esc4;
 
+int esc1Value, esc2Value, esc3Value, esc4Value;
+
 char data;
 
 
@@ -76,6 +79,8 @@ float gyroArr[4], accelerationArr[4];
 float rollCalibration, pitchCalibration, yawCalibration;
 
 int startingCode;
+
+bool autoLeveling = true;
 // some arrays to keep track of gyro and acceleration so far
 
 // define any necessary pins here
@@ -102,12 +107,14 @@ void setup() {
     // the primary sensor
     Serial.println("Udana HAWK Firing Up....");
     // seeing if the sensor works and is connected correctly
+    autoLeveling = false;
     if(!lsm.begin())
   {
     /* There was a problem detecting the LSM9DS1 ... check your connections */
     Serial.println("Ooops, no LSM9DS1 detected ... Check your wiring!");
     while(1);
   }
+
   else{
     Serial.println("Success!");
     // setting up acceleration, magnetism and gyro
@@ -173,6 +180,8 @@ void setup() {
     // startingCode reset to account for this
 
     displayInstructions();
+    batteryVoltage = (analogRead(0) + 65) * 1.2317;
+    // amount in the battery
     // all steps before doing anything
     // setting up all of the lights based on the direction that is selected by the user
     // pin mode for a led light to caclulate acceleration
@@ -302,7 +311,7 @@ void loop() {
   int secondRollInput, secondPitchInput, secondYawInput;
 
   // all of these three are based on keyPress
-  int standardVal = 0;
+
   int topVal;
   // inputs are from key press
   // I MUST calibrate and change this later in the code with raspberry pi...
@@ -345,7 +354,7 @@ void loop() {
   readData();
 
 
-
+  // somewhere around here allow the drone to be autoleveling
 
   // will change the values in the gyroArr loop
 
@@ -355,6 +364,13 @@ void loop() {
   pitchInputGyro = gyroArr[1] - pitchCalibration;
   yawInputGyro = gyroArr[2] - yawCalibration;
 
+  findPID();
+  // the inputs for this function will be the inputs of the gyro that are read in
+  // as well as the setpoints from the hypothetical receivers, in this case....
+  // the key press of the keybaard connected to raspberry pi
+
+  batteryVoltage = batteryVoltage * 0.92 + (analogRead(0) + 65) * 0.09853;
+
   // accounting for the calibration that occurred when the drone was stationary
 
 
@@ -363,8 +379,87 @@ void loop() {
   // need to calculate for angles here
 
   // all of the inputs based on reading the data each time
+  // account for throttle of the drone...
+  int keyPressThrottle;
+  int highestThrottle = 1946;
+  throttle = keyPressThrottle;
+  // throttle is a continous thing, tilting a part that's not throttle
+  // will affect the pitch/yaw/roll
+  if(startingCode == 1){
+    if(throttle > highestThrottle){
+      // fairly straightforward math right here
+      throttle = highestThrottle;
+      //Calculate the pulse for esc 1 (front-right - CCW)
+      esc1Value = throttle - pidPitchOutput + pidRollOutput - pidYawOutput;
+      //Calculate the pulse for esc 2 (rear-right - CW)
+      esc2Value = throttle + pidPitchOutput + pidRollOutput + pidYawOutput;
+
+      //Calculate the pulse for esc 3 (rear-left - CCW)
+      esc3Value = throttle + pidPitchOutput - pidRollOutput - pidYawOutput;
+
+      //Calculate the pulse for esc 4 (front-left - CW)
+      esc4Value = throttle - pidPitchOutput - pidRollOutput + pidYawOutput;
+      // based on the direction that the motor needs to spin determines what need to
+      // written to each of the escs
 
 
+    }
+    if(batteryVoltage <1200 && batteryVoltage >700){
+      float comp = (1200-batteryVoltage)/(float(3500));
+      esc1Value  = esc1Value * (comp);
+
+      // quite low voltage too - bring pulse down due to voltage drop
+    }
+    // worrying about the lowest limits here
+    if(esc1Value < 1050){
+      esc1Value = 1050;
+    }
+    if(esc2Value < 1050){
+      esc2Value = 1050;
+    }
+    if(esc3Value < 1050){
+      esc3Value = 1050;
+    }
+    if(esc4Value < 1050){
+      esc4Value = 1050;
+    }
+    if(esc1Value > 2000){
+      esc1Value = 2000;
+    }
+    if(esc2Value > 2000){
+      esc2Value = 2000;
+    }
+    if(esc3Value > 2000){
+      esc3Value = 2000;
+    }
+    if(esc4Value > 2000){
+      esc4Value = 2000;
+    }
+    // the drone would have started HERE
+
+  }
+  else{
+    esc1Value = 1000;
+    esc2Value = 1000;
+    esc3Value = 1000;
+    esc4Value = 1000;
+
+    // the starting code here is 1, so we can safely assume that the drone is
+    // not going to be moving anytime soon....
+
+  }
+
+  esc1.writeMicroseconds(esc1Value);
+  esc2.writeMicroseconds(esc2Value);
+  esc3.writeMicroseconds(esc3Value);
+  esc4.writeMicroseconds(esc4Value);
+
+
+
+  // next step is to have
+
+
+  // write the escValues to each respective esc each time that this occurs
 
   if (Serial.available()) {
         data = Serial.read();
@@ -479,6 +574,8 @@ void loop() {
     // put your main code here, to run repeatedly:
 }
 
+// below are the necessary functions here
+
 
 void calibrateESC(){
   esc1.writeMicroseconds(MAX_PULSE_LENGTH);
@@ -502,7 +599,8 @@ void calibrateESC(){
 }
 
 
-
+// a simple testing function to go from the minimum to maximum pulse length
+// for the ESCS
 void test()
 {
     for (int i = MIN_PULSE_LENGTH; i <= MAX_PULSE_LENGTH; i += 5) {
