@@ -163,13 +163,15 @@ void setup() {
     esc4.attach(11, MIN_PULSE_LENGTH, MAX_PULSE_LENGTH);
 
     Serial.println("Calbrations...");
-    batteryVoltage = (analogRead(0) + 65) * 1.2317;
 
-
+    // the question is, when will we start this
 
 
     // now for calbrating and arming the escs (one still doesn't work..)
     calibrateESC();
+    // after this and the user has plugged in the drone we will be ready to begin
+    // startingCode reset to account for this
+
     displayInstructions();
     // all steps before doing anything
     // setting up all of the lights based on the direction that is selected by the user
@@ -255,17 +257,53 @@ void loop() {
   //int x = 0;
   //int x = 1;
   //digitalWrite(LED, HIGH)
-
+  // printing some kind of instructions here
 
   // steps
   // get the data
   // convert it to degrees
   // use the pid controller to figure out the outputs
-
+  //calibrateESC();
   // do stuff with the motors for the final answer
+
+  Serial.print("The value of the starting code here should be 1.");
+
+  int keyPress;
+
+  // hypothetical example where is key is 11 then the drone will shut down.
+  if(keyPress == 11 and startingCode == 1){
+    esc1.writeMicroseconds(MIN_PULSE_LENGTH);
+    esc2.writeMicroseconds(MIN_PULSE_LENGTH);
+    esc3.writeMicroseconds(MIN_PULSE_LENGTH);
+    esc4.writeMicroseconds(MIN_PULSE_LENGTH);
+    Serial.print("Bringing down the values down to 0.");
+    startingCode = 0;
+  }
+  if(keyPress == 10 and startingCode == 0){
+      // example where the motor will be started again
+      calibrateESC();
+      iMemRoll = 0;
+      iMemPitch = 0;
+      iMemYaw = 0;
+      pidLastRoll_D_Error = 0;
+      pidLastPitch_D_Error = 0;
+      pidLastYaw_D_Error = 0;
+      // resetting all of the pid values when everything is restarted.
+      Serial.print("Restarting the HAWK.");
+      startingCode = 1;
+  }
+
+
+  // the pid setpoints are determined by the receiver inputs, and are in degrees per second.
+
+  
+
 
 
   readData();
+
+
+
   // will change the values in the gyroArr loop
 
   // all of the setpoints are determined by the input from the receiver, in this case, the key press on the keyboard.
@@ -275,6 +313,10 @@ void loop() {
   rollInputGyro = gyroArr[0];
   pitchInputGyro = gyroArr[1];
   yawInputGyro = gyroArr[2];
+
+
+  // possibly have some kind of calibration for the angles HERE
+
   // need to calculate for angles here
 
   // all of the inputs based on reading the data each time
@@ -411,6 +453,7 @@ void calibrateESC(){
   esc4.writeMicroseconds(MIN_PULSE_LENGTH);
   delay(1000);
   Serial.print("Hopefully all four escs should be calibrated...");
+  startingCode = 1;
   // 1 second delay should enable the esc to know where the max and min pulse are each at....
 
 }
