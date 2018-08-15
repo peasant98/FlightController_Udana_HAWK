@@ -296,7 +296,49 @@ void loop() {
 
   // the pid setpoints are determined by the receiver inputs, and are in degrees per second.
 
-  
+  rollSetpoint = 0;
+  // here are we assuming that we are not at autolevel
+  int rollInput, pitchInput, yawInput;
+  int secondRollInput, secondPitchInput, secondYawInput;
+
+  // all of these three are based on keyPress
+  int standardVal = 0;
+  int topVal;
+  // inputs are from key press
+  // I MUST calibrate and change this later in the code with raspberry pi...
+  if(rollInput == topVal){
+    rollSetpoint = topVal;
+  }
+  else if(secondRollInput == topVal){
+    rollSetpoint = -1 * topVal;
+  }
+  else{
+    rollSetpoint = 0;
+  }
+
+  if(pitchInput == topVal){
+    pitchSetpoint = topVal;
+  }
+  else if(secondPitchInput == topVal){
+    pitchSetpoint = -1 * topVal;
+  }
+  else{
+    pitchSetpoint = 0;
+  }
+
+  if(yawInput == topVal){
+    yawSetpoint = topVal;
+  }
+  else if(secondYawInput == topVal){
+    yawSetpoint = -1 * topVal;
+  }
+  else{
+    yawSetpoint = 0;
+  }
+  // changing the setpont variables in degrees per seconds
+  // we may have to do some math later to get to degrees per seconds
+  // from a simple key press, and later, without any keys at all.
+
 
 
 
@@ -304,15 +346,16 @@ void loop() {
 
 
 
+
   // will change the values in the gyroArr loop
 
   // all of the setpoints are determined by the input from the receiver, in this case, the key press on the keyboard.
-  rollSetpoint  = 0;
-  pitchSetpoint = 0;
-  yawSetpoint = 0;
-  rollInputGyro = gyroArr[0];
-  pitchInputGyro = gyroArr[1];
-  yawInputGyro = gyroArr[2];
+
+  rollInputGyro = gyroArr[0] - rollCalibration;
+  pitchInputGyro = gyroArr[1] - pitchCalibration;
+  yawInputGyro = gyroArr[2] - yawCalibration;
+
+  // accounting for the calibration that occurred when the drone was stationary
 
 
   // possibly have some kind of calibration for the angles HERE
