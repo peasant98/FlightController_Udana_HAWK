@@ -132,12 +132,16 @@ void setup() {
     //pinMode(LED0, OUTPUT);
     startingCode = 0;
     // need to calibrate the gyros when the drone is stationary
+
+
+    // must be stationary or the drone will not work!!!
     for(int i = 0; i< 2000; i++){
       readData();
       rollCalibration = rollCalibration + gyroArr[0];
       pitchCalibration = pitchCalibration + gyroArr[1];
       yawCalibration = yawCalibration + gyroArr[2];
       delay(4);
+      // delay 4 milliseconds
       // adding up all of the totals so that we can get the average
       // read the data and put the infomration into an array that is basically global to the whole program....
 
@@ -145,6 +149,8 @@ void setup() {
     rollCalibration = rollCalibration/2000;
     pitchCalibration = pitchCalibration/2000;
     yawCalibration = yawCalibration/2000;
+    // subtract that everything once we read in dps input for the gyro
+    // subtract this from the current reading for the best relative value
     // will account for this as the drone is moving
     // getting the averages of everything thus far
 
@@ -158,6 +164,9 @@ void setup() {
 
     Serial.println("Calbrations...");
     batteryVoltage = (analogRead(0) + 65) * 1.2317;
+
+
+
 
     // now for calbrating and arming the escs (one still doesn't work..)
     calibrateESC();
@@ -178,7 +187,7 @@ void displayInstructions()
     Serial.println("\t2 : Run test function\n");
 }
 
-
+// pid algorithm is here, once we have the desired user inputs we can do stuff
 void findPID(){
 
   pidErrorTemp = rollInputGyro - rollSetpoint;
@@ -246,6 +255,31 @@ void loop() {
   //int x = 0;
   //int x = 1;
   //digitalWrite(LED, HIGH)
+
+
+  // steps
+  // get the data
+  // convert it to degrees
+  // use the pid controller to figure out the outputs
+
+  // do stuff with the motors for the final answer
+
+
+  readData();
+  // will change the values in the gyroArr loop
+
+  // all of the setpoints are determined by the input from the receiver, in this case, the key press on the keyboard.
+  rollSetpoint  = 0;
+  pitchSetpoint = 0;
+  yawSetpoint = 0;
+  rollInputGyro = gyroArr[0];
+  pitchInputGyro = gyroArr[1];
+  yawInputGyro = gyroArr[2];
+  // need to calculate for angles here
+
+  // all of the inputs based on reading the data each time
+
+
 
   if (Serial.available()) {
         data = Serial.read();
