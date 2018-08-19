@@ -11,7 +11,10 @@
 
 
 // written by Matthew Strong, sophomore at CU Boulder
+// CTO of Udana Systems, 2018
 
+// first 'version' is based on a drone that can be controlled by a keyboard, so we can do that
+// we have to have some kind of good way to have user keyboard input
 
 // I will create the PID controller and algorithm for handling the necessary aspects here
 // and add the code here (the Adafruit LSM9DSL) is already working perfectly here
@@ -76,6 +79,8 @@ char data;
 Adafruit_LSM9DS1 lsm = Adafruit_LSM9DS1();
 
 float gyroArr[4], accelerationArr[4];
+float keyboardRoll[1], keyboardPitch[1], keybaardYaw[1];
+// arrays for the roll, pitch and yaw for the keybpard
 float rollCalibration, pitchCalibration, yawCalibration;
 
 int startingCode;
@@ -142,6 +147,12 @@ void setup() {
 
 
     // must be stationary or the drone will not work!!!
+
+
+
+
+    /*
+
     for(int i = 0; i< 2000; i++){
       readData();
       rollCalibration = rollCalibration + gyroArr[0];
@@ -161,6 +172,8 @@ void setup() {
     // will account for this as the drone is moving
     // getting the averages of everything thus far
 
+    */
+
 
 
 
@@ -175,12 +188,20 @@ void setup() {
 
 
     // now for calbrating and arming the escs (one still doesn't work..)
-    calibrateESC();
+
+
+    //calibrateESC();
+
+
     // after this and the user has plugged in the drone we will be ready to begin
     // startingCode reset to account for this
 
     displayInstructions();
-    batteryVoltage = (analogRead(0) + 65) * 1.2317;
+
+
+
+
+    //batteryVoltage = (analogRead(0) + 65) * 1.2317;
     // amount in the battery
     // all steps before doing anything
     // setting up all of the lights based on the direction that is selected by the user
@@ -275,6 +296,14 @@ void loop() {
   //calibrateESC();
   // do stuff with the motors for the final answer
 
+
+// Beginning of CODE.....
+
+
+
+
+
+/*
   Serial.print("The value of the starting code here should be 1.");
 
   int keyPress;
@@ -351,8 +380,9 @@ void loop() {
 
 
 
-  readData();
 
+  readData();
+  // need to get pitch, roll, yaw adjust
 
   // somewhere around here allow the drone to be autoleveling
 
@@ -454,6 +484,13 @@ void loop() {
   esc3.writeMicroseconds(esc3Value);
   esc4.writeMicroseconds(esc4Value);
 
+*/
+
+
+
+
+// END OF CODE.......
+
 
 
   // next step is to have
@@ -461,6 +498,7 @@ void loop() {
 
   // write the escValues to each respective esc each time that this occurs
 
+  // this code here is for only testing purposes and only to ensure that the motors are turning properly once that they are all attacehed
   if (Serial.available()) {
         data = Serial.read();
         switch (data) {
@@ -603,7 +641,7 @@ void calibrateESC(){
 // for the ESCS
 void test()
 {
-    for (int i = MIN_PULSE_LENGTH; i <= MAX_PULSE_LENGTH; i += 5) {
+    for (int i = MIN_PULSE_LENGTH; i <= 1400; i += 5) {
         Serial.print("Pulse length = ");
         Serial.println(i);
 
