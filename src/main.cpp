@@ -36,6 +36,9 @@
 // these are arbitrary values that will be changed later
 
 //
+
+
+float angleRollAcc, anglePitchAcc, anglePitch, angleRoll;
 // p, i, and d settings for the roll
 float PgainRoll = 1.4;
 float IgainRoll = 0.04;
@@ -75,6 +78,9 @@ int esc1Value, esc2Value, esc3Value, esc4Value;
 
 char data;
 
+unsigned long timerDrone;
+// possibly the time for the drone currently
+
 
 Adafruit_LSM9DS1 lsm = Adafruit_LSM9DS1();
 
@@ -84,6 +90,8 @@ float keyboardRoll[1], keyboardPitch[1], keybaardYaw[1];
 float rollCalibration, pitchCalibration, yawCalibration;
 
 int startingCode;
+
+float rollAdjust, pitchAdjust;
 
 bool autoLeveling = true;
 // some arrays to keep track of gyro and acceleration so far
@@ -190,7 +198,7 @@ void setup() {
     // now for calbrating and arming the escs (one still doesn't work..)
 
 
-    //calibrateESC();
+    calibrateESC();
 
 
     // after this and the user has plugged in the drone we will be ready to begin
@@ -201,7 +209,19 @@ void setup() {
 
 
 
+
+
     //batteryVoltage = (analogRead(0) + 65) * 1.2317;
+
+
+
+
+
+    //timerDrone = micros();
+
+    // type of micros is unsigned long here
+
+
     // amount in the battery
     // all steps before doing anything
     // setting up all of the lights based on the direction that is selected by the user
@@ -382,6 +402,93 @@ void loop() {
 
 
   readData();
+
+
+
+
+  anglePitch = anglePitch + (gyroArr[0]* 0.0000611);
+  angleRoll = angleRollAcc + (gyroArr[1]*0.0000611);
+
+  */
+  anglePitch -= angleRoll * sin(gyroArr[2] * 0.000001066);
+  angleRoll += anglePitch * sin(gyroArr[2] * 0.000001066);
+  if(abs(accelerationArr[1])< accelerationArr[3]){
+    anglePitchAcc = asin((float)accelerationArr[1]/accelerationArr[3])*57.2960;
+}
+  if(abs(accelerationArr[0])< accelerationArr[3]){
+    angleRollAcc = asin((float)accelerationArr[0]/accelerationArr[3])* (-57.2960);
+  }
+
+
+  anglePitch = anglePitch * 0.9997 + anglePitchAcc * 0.0003;            //Correct the drift of the gyro pitch angle with the accelerometer pitch angle.
+  angleRoll = angleRoll * 0.9997 + angleRollAcc * 0.0003;
+
+                 //Correct the drift of the gyro roll angle with the accelerometer roll angle.
+
+  pitchAdjust = anglePitch * 15;
+  rollAdjust = angleRoll * 15;
+
+  if(!autoLeveling){
+    pitchAdjust = 0;
+    rollAdjust = 0;
+  }
+  pitchSetpoint = pitchSetpoint - pitchAdjust;
+  rollSetpoint = rollSetpoint - rollAdjust;
+  // accounting for the roll and pitch adjustments based on angles
+  // we need to look more into this and see if any dividing needs to be done as per the PID controller
+
+/*
+  if(abs(acc_y) < acc_total_vector){                                        //Prevent the asin function to produce a NaN
+    angle_pitch_acc = asin((float)acc_y/acc_total_vector)* 57.296;          //Calculate the pitch angle.
+  }
+  if(abs(acc_x) < acc_total_vector){                                        //Prevent the asin function to produce a NaN
+    angle_roll_acc = asin((float)acc_x/acc_total_vector)* -57.296;          //Calculate the roll angle.
+  }
+  // already have calculated the net acceleration vector from the answer here
+
+
+  angle_pitch += gyro_pitch * 0.0000611;                                    //Calculate the traveled pitch angle and add this to the angle_pitch variable.
+  angle_roll += gyro_roll * 0.0000611;                                      //Calculate the traveled roll angle and add this to the angle_roll variable.
+
+  //0.000001066 = 0.0000611 * (3.142(PI) / 180degr) The Arduino sin function is in radians
+  angle_pitch -= angle_roll * sin(gyro_yaw * 0.000001066);                  //If the IMU has yawed transfer the roll angle to the pitch angel.
+  angle_roll += angle_pitch * sin(gyro_yaw * 0.000001066);                  //If the IMU has yawed transfer the pitch angle to the roll angel.
+
+  acc_total_vector = sqrt((acc_x*acc_x)+(acc_y*acc_y)+(acc_z*acc_z));       //Calculate the total accelerometer vector.
+
+  if(abs(acc_y) < acc_total_vector){                                        //Prevent the asin function to produce a NaN
+    angle_pitch_acc = asin((float)acc_y/acc_total_vector)* 57.296;          //Calculate the pitch angle.
+  }
+  if(abs(acc_x) < acc_total_vector){                                        //Prevent the asin function to produce a NaN
+    angle_roll_acc = asin((float)acc_x/acc_total_vector)* -57.296;          //Calculate the roll angle.
+  }
+
+  //Place the MPU-6050 spirit level and note the values in the following two lines for calibration.
+  angle_pitch_acc -= 0.0;                                                   //Accelerometer calibration value for pitch.
+  angle_roll_acc -= 0.0;                                                    //Accelerometer calibration value for roll.
+
+  angle_pitch = angle_pitch * 0.9996 + angle_pitch_acc * 0.0004;            //Correct the drift of the gyro pitch angle with the accelerometer pitch angle.
+  angle_roll = angle_roll * 0.9996 + angle_roll_acc * 0.0004;               //Correct the drift of the gyro roll angle with the accelerometer roll angle.
+
+  pitch_level_adjust = angle_pitch * 15;                                    //Calculate the pitch angle correction
+  roll_level_adjust = angle_roll * 15;                                      //Calculate the roll angle correction
+
+  if(!auto_level){                                                          //If the quadcopter is not in auto-level mode
+    pitch_level_adjust = 0;                                                 //Set the pitch angle correction to zero.
+    roll_level_adjust = 0;                                                  //Set the roll angle correcion to zero.
+  }
+
+
+
+  angle_pitch = angle_pitch_acc;                                          //Set the gyro pitch angle equal to the accelerometer pitch angle when the quadcopter is started.
+  angle_roll = angle_roll_acc;                                            //Set the gyro roll angle equal to the accelerometer roll angle when the quadcopter is started.
+  gyro_angles_set = true;
+
+
+
+
+
+
   // need to get pitch, roll, yaw adjust
 
   // somewhere around here allow the drone to be autoleveling
@@ -395,6 +502,9 @@ void loop() {
   yawInputGyro = gyroArr[2] - yawCalibration;
 
   findPID();
+
+
+  // the calculate PID function in all of it's glor....
   // the inputs for this function will be the inputs of the gyro that are read in
   // as well as the setpoints from the hypothetical receivers, in this case....
   // the key press of the keybaard connected to raspberry pi
@@ -496,7 +606,7 @@ void loop() {
   // next step is to have
 
 
-  // write the escValues to each respective esc each time that this occurs
+  // write the escValues to each respective esc each time that this occurs..... read every 4 microseconds
 
   // this code here is for only testing purposes and only to ensure that the motors are turning properly once that they are all attacehed
   if (Serial.available()) {
@@ -610,6 +720,21 @@ void loop() {
   // maybe use this delay for later....
   //delay(1000);
     // put your main code here, to run repeatedly:
+    // currently I do not know the pulse in Hz of my ESC so I am assuming that my 30A ESC is 250 Hz, so every 4000 us we reset the timer.
+    //while(micros() - timerDrone < 4000);
+    // accounting for the extra time to have the rest of the pulse
+
+    // need to be able to check the pulse of esc in order to do stuff
+    // simply having some waiting tiem herr, we will see if we need this later
+
+
+
+
+    //timerDrone = micros();
+
+
+
+    // resetting time for later
 }
 
 // below are the necessary functions here
