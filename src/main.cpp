@@ -37,6 +37,11 @@
 
 //
 
+// important values for keeping track of things
+
+float throttleWValue;
+
+
 
 float angleRollAcc, anglePitchAcc, anglePitch, angleRoll;
 // p, i, and d settings for the roll
@@ -102,6 +107,7 @@ bool autoLeveling = true;
 void test();
 void displayInstructions();
 void readData();
+
 void calibrateESC();
 //Motor 1 : front left - clockwise
 //Motor 2 : front right - counter-clockwise
@@ -151,6 +157,7 @@ void setup() {
     //pinMode(LED1, OUTPUT);
     //pinMode(LED0, OUTPUT);
     startingCode = 0;
+    throttleWValue = 0.0;
     // need to calibrate the gyros when the drone is stationary
 
 
@@ -200,11 +207,13 @@ void setup() {
 
     calibrateESC();
 
+    // will allow the drone to be properly calibrated.
+
 
     // after this and the user has plugged in the drone we will be ready to begin
     // startingCode reset to account for this
 
-    displayInstructions();
+    //displayInstructions();
 
 
 
@@ -217,7 +226,7 @@ void setup() {
 
 
 
-    //timerDrone = micros();
+    timerDrone = micros();
 
     // type of micros is unsigned long here
 
@@ -234,12 +243,23 @@ void setup() {
 void displayInstructions()
 {
     Serial.println("Choose an Option:");
-    Serial.println("\t0 : Send min throttle");
-    Serial.println("\t1 : Send max throttle");
-    Serial.println("\t2 : Run test function\n");
+    Serial.println("W - Increase the Throttle");
+    Serial.println("S - Decrease the Throttle");
+    // throttle options either bring it down or bring it up....
+    Serial.println("A - Up the Pitch");
+    Serial.println("");
+    Serial.println("D - Up the Yaw");
+    Serial.println("");
+    Serial.println("E - Up the Roll");
+    Serial.println("");
+    Serial.println("");
+    Serial.println("In the proto-proto-prototype version instructions: ");
+    Serial.println("0 : Send min throttle");
+    Serial.println("1 : Send max throttle");
+    Serial.println("2 : Run test function\n");
 }
 
-// pid algorithm is here, once we have the desired user inputs we can do stuff
+// pid algorithm is here, once we have the desired user inputs we can calculate what pulse we must send to each of the motors
 void findPID(){
 
   pidErrorTemp = rollInputGyro - rollSetpoint;
@@ -304,20 +324,64 @@ void findPID(){
 }
 
 void loop() {
-  //int x = 0;
-  //int x = 1;
-  //digitalWrite(LED, HIGH)
-  // printing some kind of instructions here
 
-  // steps
-  // get the data
-  // convert it to degrees
-  // use the pid controller to figure out the outputs
+  displayInstructions();
+  // request a character from the user
+
+
+
+
+  // allow the user the see the options that they can do in order to control the drone
+  if (Serial.available()) {
+        // need to modify this on the raspberry pi
+        data = Serial.read();
+        String o = String(data);
+        Serial.print("I received the code: ");
+        Serial.println(data, DEC);
+        switch (data) {
+
+
+            case 119:
+                    // when the w key is pressed
+
+            case 115:
+                  // case when the s is pressed
+            case 97:
+                  //case when the a is pressed, change pitch
+            case 100:
+                  // case when the d is pressed, change
+            case 101:
+                  // case when the e is pressed
+
+            // 0
+            case 48 : Serial.println("Sending minimum throttle");
+                      esc1.writeMicroseconds(MIN_PULSE_LENGTH);
+                      esc2.writeMicroseconds(MIN_PULSE_LENGTH);
+                      esc3.writeMicroseconds(MIN_PULSE_LENGTH);
+                      esc4.writeMicroseconds(MIN_PULSE_LENGTH);
+            break;
+            // 1
+            case 49 : Serial.println("Sending maximum throttle");
+                      esc1.writeMicroseconds(MAX_PULSE_LENGTH);
+                      esc2.writeMicroseconds(MAX_PULSE_LENGTH);
+                      esc3.writeMicroseconds(MAX_PULSE_LENGTH);
+                      esc4.writeMicroseconds(MAX_PULSE_LENGTH);
+            break;
+
+            // 2
+            case 50 : Serial.print("Running test in 3");
+                      delay(1000);
+                      Serial.print(" 2");
+                      delay(1000);
+                      Serial.println(" 1...");
+                      delay(1000);
+                      test();
+            break;
+        }
+    }
+
+
   //calibrateESC();
-  // do stuff with the motors for the final answer
-
-
-// Beginning of CODE.....
 
 
 
@@ -409,7 +473,7 @@ void loop() {
   anglePitch = anglePitch + (gyroArr[0]* 0.0000611);
   angleRoll = angleRollAcc + (gyroArr[1]*0.0000611);
 
-  */
+
   anglePitch -= angleRoll * sin(gyroArr[2] * 0.000001066);
   angleRoll += anglePitch * sin(gyroArr[2] * 0.000001066);
   if(abs(accelerationArr[1])< accelerationArr[3]){
@@ -437,7 +501,7 @@ void loop() {
   // accounting for the roll and pitch adjustments based on angles
   // we need to look more into this and see if any dividing needs to be done as per the PID controller
 
-/*
+
   if(abs(acc_y) < acc_total_vector){                                        //Prevent the asin function to produce a NaN
     angle_pitch_acc = asin((float)acc_y/acc_total_vector)* 57.296;          //Calculate the pitch angle.
   }
@@ -609,35 +673,7 @@ void loop() {
   // write the escValues to each respective esc each time that this occurs..... read every 4 microseconds
 
   // this code here is for only testing purposes and only to ensure that the motors are turning properly once that they are all attacehed
-  if (Serial.available()) {
-        data = Serial.read();
-        switch (data) {
-            // 0
-            case 48 : Serial.println("Sending minimum throttle");
-                      esc1.writeMicroseconds(MIN_PULSE_LENGTH);
-                      esc2.writeMicroseconds(MIN_PULSE_LENGTH);
-                      esc3.writeMicroseconds(MIN_PULSE_LENGTH);
-                      esc4.writeMicroseconds(MIN_PULSE_LENGTH);
-            break;
-            // 1
-            case 49 : Serial.println("Sending maximum throttle");
-                      esc1.writeMicroseconds(MAX_PULSE_LENGTH);
-                      esc2.writeMicroseconds(MAX_PULSE_LENGTH);
-                      esc3.writeMicroseconds(MAX_PULSE_LENGTH);
-                      esc4.writeMicroseconds(MAX_PULSE_LENGTH);
-            break;
 
-            // 2
-            case 50 : Serial.print("Running test in 3");
-                      delay(1000);
-                      Serial.print(" 2");
-                      delay(1000);
-                      Serial.println(" 1...");
-                      delay(1000);
-                      test();
-            break;
-        }
-    }
   /*
   while(Serial.available()>0){
     // while we can read from Serial
