@@ -39,7 +39,7 @@
 
 // important values for keeping track of things
 
-float throttleWValue;
+float throttleValue, pitchValue, yawValue, rollValue;
 
 
 
@@ -157,7 +157,11 @@ void setup() {
     //pinMode(LED1, OUTPUT);
     //pinMode(LED0, OUTPUT);
     startingCode = 0;
-    throttleWValue = 0.0;
+    throttleValue = 0.0;
+    pitchValue = 0.0;
+    yawValue = 0.0;
+    rollValue = 0.0;
+    // setting all of the intermediate values to calculate the pitch, roll, yaw, and throttle
     // need to calibrate the gyros when the drone is stationary
 
 
@@ -243,15 +247,15 @@ void setup() {
 void displayInstructions()
 {
     Serial.println("Choose an Option:");
-    Serial.println("W - Increase the Throttle");
-    Serial.println("S - Decrease the Throttle");
+    Serial.println("Q - Increase the Throttle");
+    Serial.println("W - Decrease the Throttle");
     // throttle options either bring it down or bring it up....
     Serial.println("A - Up the Pitch");
-    Serial.println("");
-    Serial.println("D - Up the Yaw");
-    Serial.println("");
+    Serial.println("S - Down the Pitch");
+    Serial.println("Z - Up the Yaw");
+    Serial.println("X - Down the Yaw");
     Serial.println("E - Up the Roll");
-    Serial.println("");
+    Serial.println("R - Down the Roll");
     Serial.println("");
     Serial.println("In the proto-proto-prototype version instructions: ");
     Serial.println("0 : Send min throttle");
@@ -341,17 +345,44 @@ void loop() {
         switch (data) {
 
 
+            // the cases here are displayed in order in which the instructions are displayed
+
+            // letters:
+            // q, w, a, s, z, x, e, r
+
+            // roll - x
+            // pitch - y
+            // yaw - z
+
+            case 113:
+            // increase throttle
+
             case 119:
-                    // when the w key is pressed
+            // decrease throttle
+
+            case 97:
+            // increase pitch in +y direction
 
             case 115:
-                  // case when the s is pressed
-            case 97:
-                  //case when the a is pressed, change pitch
-            case 100:
-                  // case when the d is pressed, change
+            // increase pitch in -y direction
+
+            case 122:
+            // increase yaw in +z direction
+
+            case 120:
+
+            // increase yaw in -z direction
+
             case 101:
-                  // case when the e is pressed
+
+            // increase roll in +x direction
+
+            case 114:
+
+            // increase roll in -x direction
+
+
+
 
             // 0
             case 48 : Serial.println("Sending minimum throttle");
