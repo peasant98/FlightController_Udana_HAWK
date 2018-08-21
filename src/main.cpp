@@ -41,8 +41,6 @@
 
 float throttleValue, pitchValue, yawValue, rollValue;
 
-
-
 float angleRollAcc, anglePitchAcc, anglePitch, angleRoll;
 // p, i, and d settings for the roll
 float PgainRoll = 1.4;
@@ -202,15 +200,14 @@ void setup() {
     esc3.attach(12, MIN_PULSE_LENGTH, MAX_PULSE_LENGTH);
     esc4.attach(11, MIN_PULSE_LENGTH, MAX_PULSE_LENGTH);
 
-    Serial.println("Calbrations...");
+    Serial.println("Calibrations...");
 
-    // the question is, when will we start this
 
 
     // now for calbrating and arming the escs (one still doesn't work..)
 
 
-    //calibrateESC();
+    calibrateESC();
 
     // will allow the drone to be properly calibrated.
 
@@ -218,7 +215,7 @@ void setup() {
     // after this and the user has plugged in the drone we will be ready to begin
     // startingCode reset to account for this
 
-    //displayInstructions();
+    displayInstructions();
 
 
 
@@ -247,6 +244,8 @@ void setup() {
 }
 void displayInstructions()
 {
+    Serial.println("Welcome to the Udana HAWK Serial Console!");
+    Serial.println("");
     Serial.println("Choose an Option:");
     Serial.println("Q - Increase the Throttle");
     Serial.println("W - Decrease the Throttle");
@@ -338,39 +337,14 @@ void findPID(){
 void loop() {
 
 
+
 // the main loop
+
 
 // start up drone here
 
 
 /*
-  Serial.print("The value of the starting code here should be 1.");
-
-  int keyPress;
-
-  // hypothetical example where is key is 11 then the drone will shut down.
-  if(keyPress == 11 and startingCode == 1){
-    esc1.writeMicroseconds(MIN_PULSE_LENGTH);
-    esc2.writeMicroseconds(MIN_PULSE_LENGTH);
-    esc3.writeMicroseconds(MIN_PULSE_LENGTH);
-    esc4.writeMicroseconds(MIN_PULSE_LENGTH);
-    Serial.print("Bringing down the values down to 0.");
-    startingCode = 0;
-  }
-  if(keyPress == 10 and startingCode == 0){
-      // example where the motor will be started again
-      calibrateESC();
-      iMemRoll = 0;
-      iMemPitch = 0;
-      iMemYaw = 0;
-      pidLastRoll_D_Error = 0;
-      pidLastPitch_D_Error = 0;
-      pidLastYaw_D_Error = 0;
-      // resetting all of the pid values when everything is restarted.
-      Serial.print("Restarting the HAWK from being STATIONARY...");
-      startingCode = 1;
-  }
-
 
   // the pid setpoints are determined by the receiver inputs, and are in degrees per second.
 
@@ -408,127 +382,125 @@ void loop() {
   if (Serial.available()) {
         // need to modify this on the raspberry pi
         data = Serial.read();
-        Serial.print("I received the code: ");
+        Serial.print("Received the code: ");
         Serial.println(data, DEC);
+        // the cases here are displayed in order in which the instructions are displayed
+        // letters:
+        // q, w, a, s, z, x, e, r
+        // roll - x
+        // pitch - y
+        // yaw - z
+        if(data == 113){
+          throttleValue+=20.0;
+          notCalibrating = true;
+
+        }
+        else if(data == 119){
+          throttleValue-=20.0;
+          notCalibrating = true;
+
+        }
+        else if(data == 97){
+          pitchValue+=20.0;
+          notCalibrating = true;
+
+        }
+        else if(data == 115){
+          pitchValue-=20.0;
+          notCalibrating = true;
+
+        }
+        else if(data == 122){
+          yawValue+=20.0;
+          notCalibrating = true;
+
+        }
+        else if(data == 120){
+          yawValue-=20.0;
+          notCalibrating = true;
+
+        }
+        else if(data == 101){
+          rollValue+=20.0;
+          notCalibrating = true;
+
+        }
+        else if(data == 114){
+          rollValue-=20.0;
+          notCalibrating = true;
+
+        }
+        else if(data == 111){
+          if(startingCode == 1){
+            esc1.writeMicroseconds(MIN_PULSE_LENGTH);
+            esc2.writeMicroseconds(MIN_PULSE_LENGTH);
+            esc3.writeMicroseconds(MIN_PULSE_LENGTH);
+            esc4.writeMicroseconds(MIN_PULSE_LENGTH);
+            Serial.print("Bringing down the values down to 0.");
+            startingCode = 0;
+          }
+          else{
+            Serial.println("You cannot do this based on the starting code.");
+          }
+
+        }
+        else if(data == 112){
+          if(startingCode == 0){
+            calibrateESC();
+            // recalibrate esc because the starting code is now 0
+            iMemRoll = 0;
+            iMemPitch = 0;
+            iMemYaw = 0;
+            pidLastRoll_D_Error = 0;
+            pidLastPitch_D_Error = 0;
+            pidLastYaw_D_Error = 0;
+            // resetting all of the pid values when everything is restarted.
+            Serial.print("Restarting the HAWK from being STATIONARY...");
+            startingCode = 1;
+          }
+          else{
+            Serial.println("You cannot do this based on the starting code.");
+          }
+
+        }
+        else if(data == 48){
+          Serial.println("Sending minimum throttle");
+          esc1.writeMicroseconds(MIN_PULSE_LENGTH);
+          esc2.writeMicroseconds(MIN_PULSE_LENGTH);
+          esc3.writeMicroseconds(MIN_PULSE_LENGTH);
+          esc4.writeMicroseconds(MIN_PULSE_LENGTH);
+          notCalibrating = false;
+
+        }
+        else if(data == 49){
+          Serial.println("Sending maximum throttle");
+          esc1.writeMicroseconds(MAX_PULSE_LENGTH);
+          esc2.writeMicroseconds(MAX_PULSE_LENGTH);
+          esc3.writeMicroseconds(MAX_PULSE_LENGTH);
+          esc4.writeMicroseconds(MAX_PULSE_LENGTH);
+          notCalibrating = false;
+
+        }
+        else if(data == 50){
+          Serial.print("Running test in 3");
+          delay(1000);
+          Serial.print(" 2");
+          delay(1000);
+          Serial.println(" 1...");
+          delay(1000);
+          test();
+          notCalibrating = false;
+
+        }
+        // all other cases are just ignored.
+
+
 
         // change up the code here without switch statements
 
-        switch (data) {
 
-            // the cases here are displayed in order in which the instructions are displayed
-            // letters:
-            // q, w, a, s, z, x, e, r
-            // roll - x
-            // pitch - y
-            // yaw - z
-            case 113:
-            // increase throttle
-                      throttleValue+=20.0;
-                      notCalibrating = true;
-
-            case 119:
-            // decrease throttle
-                      throttleValue-=20.0;
-                      notCalibrating = true;
-
-            case 97:
-                      pitchValue+=20.0;
-                      notCalibrating = true;
-
-            // increase pitch in +y direction
-
-            case 115:
-            // increase pitch in -y direction
-                      pitchValue-=20.0;
-                      notCalibrating = true;
-
-            case 122:
-                      yawValue+=20.0;
-                      notCalibrating = true;
-            // increase yaw in +z direction
-
-            case 120:
-                      yawValue-=20.0;
-                      notCalibrating = true;
-
-            // increase yaw in -z direction
-
-            case 101:
-                      rollValue+=20.0;
-                      notCalibrating = true;
-
-            // increase roll in +x direction
-
-            case 114:
-                      rollValue-=20.0;
-                      notCalibrating = true;
-
-            // increase roll in -x direction
-
-            case 111:
-                      // case where the drone is already started, calibrated, and flying, and is ready to be done with the flight.
-                      if(startingCode == 1){
-                        esc1.writeMicroseconds(MIN_PULSE_LENGTH);
-                        esc2.writeMicroseconds(MIN_PULSE_LENGTH);
-                        esc3.writeMicroseconds(MIN_PULSE_LENGTH);
-                        esc4.writeMicroseconds(MIN_PULSE_LENGTH);
-                        Serial.print("Bringing down the values down to 0.");
-                        startingCode = 0;
-                      }
-                      else{
-                        Serial.println("You cannot do this based on the starting code.");
-                      }
-
-
-
-            case 112:
-                      // case where the starting code is 0, and the drone will be fired up again.
-                      if(startingCode == 0){
-                        calibrateESC();
-                        // recalibrate esc because the starting code is now 0
-                        iMemRoll = 0;
-                        iMemPitch = 0;
-                        iMemYaw = 0;
-                        pidLastRoll_D_Error = 0;
-                        pidLastPitch_D_Error = 0;
-                        pidLastYaw_D_Error = 0;
-                        // resetting all of the pid values when everything is restarted.
-                        Serial.print("Restarting the HAWK from being STATIONARY...");
-                        startingCode = 1;
-                      }
-                      else{
-                        Serial.println("You cannot do this based on the starting code.");
-                      }
-            // 0
-            case 48 : Serial.println("Sending minimum throttle");
-                      esc1.writeMicroseconds(MIN_PULSE_LENGTH);
-                      esc2.writeMicroseconds(MIN_PULSE_LENGTH);
-                      esc3.writeMicroseconds(MIN_PULSE_LENGTH);
-                      esc4.writeMicroseconds(MIN_PULSE_LENGTH);
-                      notCalibrating = false;
-            break;
-            // 1
-            case 49 : Serial.println("Sending maximum throttle");
-                      esc1.writeMicroseconds(MAX_PULSE_LENGTH);
-                      esc2.writeMicroseconds(MAX_PULSE_LENGTH);
-                      esc3.writeMicroseconds(MAX_PULSE_LENGTH);
-                      esc4.writeMicroseconds(MAX_PULSE_LENGTH);
-                      notCalibrating = false;
-            break;
-
-            // 2
-            case 50 : Serial.print("Running test in 3");
-                      delay(1000);
-                      Serial.print(" 2");
-                      delay(1000);
-                      Serial.println(" 1...");
-                      delay(1000);
-                      test();
-                      notCalibrating = false;
-            break;
-        }
     }
-    if(notCalibrating){
+    if(notCalibrating and startingCode == 1){
       if(prevThrottle == throttleValue){
         throttleValue = 1150;
           // throttle was not changed
@@ -553,7 +525,7 @@ void loop() {
       // need to get to degrees per second...
 
       if(throttleValue >= 2000){
-        throttleValue = 2000;
+        throttleValue = 1950;
       }
       if(throttleValue < (1150)){
         throttleValue = 1150;
@@ -604,7 +576,7 @@ void loop() {
 
     // reading in the data to get the right inputs
 
-    /*
+
 
 
     readData();
@@ -641,14 +613,94 @@ void loop() {
     pitchSetpoint = pitchSetpoint - pitchAdjust;
     rollSetpoint = rollSetpoint - rollAdjust;
     // compare the readings of the gyro vs the actual user input
+
+    // input is subtracted from what the roll is expected at the stationary surface; that is, when all axes are at 0 ....
+    // (0,0,0)
     rollInputGyro = gyroArr[0] - rollCalibration;
     pitchInputGyro = gyroArr[1] - pitchCalibration;
     yawInputGyro = gyroArr[2] - yawCalibration;
-
     findPID();
 
 
-    */
+
+    // getting to an actual motor reading HERE
+    int highestThrottle = 1950;
+    // throttle is a continous thing, tilting a part that's not throttle
+    // will affect the pitch/yaw/roll
+    if(startingCode == 1){
+      if(throttle > highestThrottle){
+        // fairly straightforward math right here
+        throttle = highestThrottle;
+      }
+        //Calculate the pulse for esc 1 (front-right - CCW)
+        esc1Value = throttle - pidPitchOutput + pidRollOutput - pidYawOutput;
+        //Calculate the pulse for esc 2 (rear-right - CW)
+        esc2Value = throttle + pidPitchOutput + pidRollOutput + pidYawOutput;
+
+        //Calculate the pulse for esc 3 (rear-left - CCW)
+        esc3Value = throttle + pidPitchOutput - pidRollOutput - pidYawOutput;
+
+        //Calculate the pulse for esc 4 (front-left - CW)
+        esc4Value = throttle - pidPitchOutput - pidRollOutput + pidYawOutput;
+        // based on the direction that the motor needs to spin determines what need to
+        // written to each of the escs
+
+
+
+      if(batteryVoltage <1200 && batteryVoltage >700){
+        float comp = (1200-batteryVoltage)/(float(3500));
+        esc1Value  = esc1Value * (comp);
+
+        // quite low voltage too - bring pulse down due to voltage drop
+      }
+      // worrying about the lowest limits here
+      if(esc1Value < 1050){
+        esc1Value = 1050;
+      }
+      if(esc2Value < 1050){
+        esc2Value = 1050;
+      }
+      if(esc3Value < 1050){
+        esc3Value = 1050;
+      }
+      if(esc4Value < 1050){
+        esc4Value = 1050;
+      }
+      if(esc1Value > 2000){
+        esc1Value = 2000;
+      }
+      if(esc2Value > 2000){
+        esc2Value = 2000;
+      }
+      if(esc3Value > 2000){
+        esc3Value = 2000;
+      }
+      if(esc4Value > 2000){
+        esc4Value = 2000;
+      }
+      // the drone would have started HERE
+
+    }
+    else{
+      // case where startingCode is 0
+      esc1Value = 1000;
+      esc2Value = 1000;
+      esc3Value = 1000;
+      esc4Value = 1000;
+
+      // the starting code here is 0, so we can safely assume that the drone is
+      // not going to be moving anytime soon....
+
+    }
+
+    esc1.writeMicroseconds(esc1Value);
+    esc2.writeMicroseconds(esc2Value);
+    esc3.writeMicroseconds(esc3Value);
+    esc4.writeMicroseconds(esc4Value);
+
+
+
+
 
 
   /*
