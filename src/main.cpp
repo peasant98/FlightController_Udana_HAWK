@@ -209,6 +209,8 @@ void setup() {
 
     calibrateESC();
 
+    // requires the user to plug in the battery
+
     // will allow the drone to be properly calibrated.
 
 
@@ -259,7 +261,7 @@ void displayInstructions()
     Serial.println("");
     Serial.println("O - Stop the Drone (Don't do this in midair)");
     Serial.println("P - Go, get the drone to begin again");
-    Serial.println("In the proto-proto-prototype version instructions: ");
+    Serial.println("In the proto-prototype version instructions: ");
     Serial.println("0 : Send min throttle");
     Serial.println("1 : Send max throttle");
     Serial.println("2 : Run test function\n");
@@ -379,14 +381,17 @@ void loop() {
   float prevRoll = rollValue;
   bool notCalibrating = false;
   // allow the user the see the options that they can do in order to control the drone
+  // serial will be available with the raspberry pi
   if (Serial.available()) {
         // need to modify this on the raspberry pi
         data = Serial.read();
         Serial.print("Received the code: ");
         Serial.println(data, DEC);
+        // printing data in decimal repr.
         // the cases here are displayed in order in which the instructions are displayed
         // letters:
         // q, w, a, s, z, x, e, r
+        // below are all the ascii codes for the keys that add functionality to the drone
         // roll - x
         // pitch - y
         // yaw - z
@@ -432,6 +437,7 @@ void loop() {
         }
         else if(data == 111){
           if(startingCode == 1){
+            // if the drone is in the starting condition we can bring it to a stop, not the other way around
             esc1.writeMicroseconds(MIN_PULSE_LENGTH);
             esc2.writeMicroseconds(MIN_PULSE_LENGTH);
             esc3.writeMicroseconds(MIN_PULSE_LENGTH);
@@ -456,6 +462,8 @@ void loop() {
             pidLastYaw_D_Error = 0;
             // resetting all of the pid values when everything is restarted.
             Serial.print("Restarting the HAWK from being STATIONARY...");
+            // the HAWK has already been calibrated at this point in the program though
+            // we can begin from here
             startingCode = 1;
           }
           else{
@@ -469,6 +477,7 @@ void loop() {
           esc2.writeMicroseconds(MIN_PULSE_LENGTH);
           esc3.writeMicroseconds(MIN_PULSE_LENGTH);
           esc4.writeMicroseconds(MIN_PULSE_LENGTH);
+          // write minimum throttle
           notCalibrating = false;
 
         }
@@ -478,6 +487,7 @@ void loop() {
           esc2.writeMicroseconds(MAX_PULSE_LENGTH);
           esc3.writeMicroseconds(MAX_PULSE_LENGTH);
           esc4.writeMicroseconds(MAX_PULSE_LENGTH);
+          // write max throttle
           notCalibrating = false;
 
         }
@@ -489,6 +499,7 @@ void loop() {
           Serial.println(" 1...");
           delay(1000);
           test();
+          // conduct the testing
           notCalibrating = false;
 
         }
@@ -501,6 +512,7 @@ void loop() {
 
     }
     if(notCalibrating and startingCode == 1){
+      // the drone must be at the startingCode of 1 to be able to be written a pulse too
       if(prevThrottle == throttleValue){
         throttleValue = 1150;
           // throttle was not changed
@@ -692,6 +704,7 @@ void loop() {
       // not going to be moving anytime soon....
 
     }
+    // writing the neessary pulse to each individual ESC based on the pid controller as well as battery low voltage compensation
 
     esc1.writeMicroseconds(esc1Value);
     esc2.writeMicroseconds(esc2Value);
@@ -1093,3 +1106,5 @@ void readData(){
 
 
 }
+
+// Done with the first (rough) draft.
