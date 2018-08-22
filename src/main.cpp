@@ -206,8 +206,7 @@ void setup() {
 
     // now for calbrating and arming the escs (one still doesn't work..)
 
-
-    calibrateESC();
+    //calibrateESC();
 
     // requires the user to plug in the battery
 
@@ -218,6 +217,8 @@ void setup() {
     // startingCode reset to account for this
 
     displayInstructions();
+
+    startingCode =0;
 
 
 
@@ -340,6 +341,7 @@ void loop() {
 
 
 
+
 // the main loop
 
 
@@ -351,21 +353,8 @@ void loop() {
   // the pid setpoints are determined by the receiver inputs, and are in degrees per second.
 
   rollSetpoint = 0;
-  // here are we assuming that we are not at autolevel
-  int rollInput, pitchInput, yawInput;
-  int secondRollInput, secondPitchInput, secondYawInput;
 
-  // all of these three are based on keyPress
-
-  int topVal;
   */
-
-
-
-
-
-
-  //displayInstructions();
 
 
 
@@ -379,7 +368,7 @@ void loop() {
   float prevPitch = pitchValue;
   float prevYaw = yawValue;
   float prevRoll = rollValue;
-  bool notCalibrating = false;
+  bool notCalibrating = true;
   // allow the user the see the options that they can do in order to control the drone
   // serial will be available with the raspberry pi
   if (Serial.available()) {
@@ -501,6 +490,7 @@ void loop() {
           test();
           // conduct the testing
           notCalibrating = false;
+          startingCode = 1;
 
         }
         // all other cases are just ignored.
@@ -514,7 +504,7 @@ void loop() {
     if(notCalibrating and startingCode == 1){
       // the drone must be at the startingCode of 1 to be able to be written a pulse too
       if(prevThrottle == throttleValue){
-        throttleValue = 1150;
+        throttleValue = prevThrottle;
           // throttle was not changed
       }
       if(prevPitch == pitchValue){
@@ -536,32 +526,38 @@ void loop() {
       // account for edge cases
       // need to get to degrees per second...
 
-      if(throttleValue >= 2000){
+      if(throttleValue >= 1950){
         throttleValue = 1950;
       }
-      if(throttleValue < (1150)){
-        throttleValue = 1150;
+      if(throttleValue < (1000)){
+        throttleValue = 1000;
       }
 
-      if(pitchValue > 200){
-        pitchValue = 200;
+      if(pitchValue > 400){
+        pitchValue = 400;
       }
-      if(pitchValue < -200){
-        pitchValue = -200;
+      if(pitchValue < -400){
+        pitchValue = -400;
       }
-      if(rollValue > 200){
-        rollValue = 200;
+      if(rollValue > 400){
+        rollValue = 400;
       }
-      if(rollValue < -200){
-        rollValue = -200;
+      if(rollValue < -400){
+        rollValue = -400;
       }
 
-      if(yawValue > 200){
-        yawValue = 200;
+      if(yawValue > 400){
+        yawValue = 400;
       }
-      if(yawValue < (-200)){
-        yawValue = -200;
+      if(yawValue < (-400)){
+        yawValue = -400;
       }
+
+      Serial.println(throttle);
+      Serial.println(pitchValue);
+      Serial.println(rollValue);
+      Serial.println(yawValue);
+
 
 
 
@@ -572,10 +568,13 @@ void loop() {
       yawSetpoint = yawValue;
       rollSetpoint = rollValue;
 
+      // here  is simply a test
+
       esc1.writeMicroseconds(throttle);
       esc2.writeMicroseconds(throttle);
       esc3.writeMicroseconds(throttle);
       esc4.writeMicroseconds(throttle);
+      //delay(1000);
 
 
     }
@@ -590,6 +589,8 @@ void loop() {
 
 
 
+
+    /*
 
     readData();
 
@@ -712,7 +713,7 @@ void loop() {
     esc4.writeMicroseconds(esc4Value);
 
 
-
+    */
 
 
 
@@ -1011,7 +1012,7 @@ void calibrateESC(){
   esc2.writeMicroseconds(MIN_PULSE_LENGTH);
   esc3.writeMicroseconds(MIN_PULSE_LENGTH);
   esc4.writeMicroseconds(MIN_PULSE_LENGTH);
-  delay(1000);
+  delay(4000);
   Serial.print("Hopefully all four escs should be calibrated...");
   startingCode = 1;
   // 1 second delay should enable the esc to know where the max and min pulse are each at....
@@ -1023,7 +1024,7 @@ void calibrateESC(){
 // for the ESCS
 void test()
 {
-    for (int i = MIN_PULSE_LENGTH; i <= 1400; i += 5) {
+    for (int i = MIN_PULSE_LENGTH; i <= 1900; i += 5) {
         Serial.print("Pulse length = ");
         Serial.println(i);
 
@@ -1090,8 +1091,8 @@ void readData(){
   gyroArr[1] = g.gyro.y;
   gyroArr[2] = g.gyro.z;
   gyroArr[3] = gyroResult;
-  Serial.println();
-  Serial.println();
+  //Serial.println();
+  //Serial.println();
   // just printing some extra lines here
 
   // calculate the acceleration, magnetism, and gyro every second
