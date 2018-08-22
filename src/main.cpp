@@ -19,6 +19,10 @@
 // I will create the PID controller and algorithm for handling the necessary aspects here
 // and add the code here (the Adafruit LSM9DSL) is already working perfectly here
 
+// issues thus far:
+// after calibrating the four escs (in which all four give the desired beep signals), the motors will stop in the middle of going from 1000 to 1500 microseconds
+// pulse. The reason is perhaps the battery; but could be related to how fast I given off the signals.... we will seeing
+
 // including all of the necessary libraries
 //#include "..\resources\Adafruit_Sensor.h"
 //#include "..\resources\Adafruit_LSM9DS1.h"
