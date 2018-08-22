@@ -531,10 +531,10 @@ void loop() {
         yawValue = -400;
       }
 
-      Serial.println(throttle);
-      Serial.println(pitchValue);
-      Serial.println(rollValue);
-      Serial.println(yawValue);
+      //Serial.println(throttle);
+      //Serial.println(pitchValue);
+      //Serial.println(rollValue);
+      //Serial.println(yawValue);
 
 
 
@@ -902,53 +902,9 @@ void loop() {
 
   /*
 
-
-
-
-  sensors_event_t a, m, g, temp;
-
-  lsm.getEvent(&a, &m, &g, &temp);
-  // getthing even of each sensor, and each one will have it's own values
-
-
-  Serial.print("Accel X: "); Serial.print(a.acceleration.x); Serial.print(" m/s^2");
-  Serial.print("\tY: "); Serial.print(a.acceleration.y);     Serial.print(" m/s^2 ");
-  Serial.print("\tZ: "); Serial.print(a.acceleration.z);     Serial.println(" m/s^2 ");
-  float accX = a.acceleration.x * a.acceleration.x;
-  float accY = a.acceleration.y * a.acceleration.y;
-  float accZ = a.acceleration.z * a.acceleration.z;
-  float xAndy = sqrtf(accX + accY);
-  float xyA = xAndy * xAndy;
-  float result = sqrtf(xyA + accZ);
-  // creating total 3-d acceleration vector that finds net acceleration for the sensor, should be 9.8 to 9.9 at rest noramlly
-
-  Serial.print("The 3-d vector for acceleration is: "); Serial.print(result); Serial.println("m/s^2 ");
-  if(result>11){
-    Serial.print("Slow down please!"  );
-    digitalWrite(LED3, HIGH);
-    digitalWrite(LED2, HIGH);
-    digitalWrite(LED1, HIGH);
-    digitalWrite(LED0, HIGH);
-
-  }
-  else{
-    digitalWrite(LED3, LOW);
-    digitalWrite(LED2, LOW);
-    digitalWrite(LED1, LOW);
-    digitalWrite(LED0, LOW);
-  }
-  // printing out all of the values
-  Serial.print("Magnetic field X: "); Serial.print(m.magnetic.x);   Serial.print(" gauss");
-  Serial.print("\tY: "); Serial.print(m.magnetic.y);     Serial.print(" gauss");
-  Serial.print("\tZ: "); Serial.print(m.magnetic.z);     Serial.println(" gauss");
-
-  Serial.print("Roll: "); Serial.print(g.gyro.x);   Serial.print(" dps");
-  Serial.print("Pitch: "); Serial.print(g.gyro.y);      Serial.print(" dps");
-  Serial.print("Yaw: "); Serial.print(g.gyro.z);      Serial.println(" dps");
-
-  Serial.println();
-  Serial.println();
   */
+
+
 
 
   // calculate the acceleration, magnetism, and gyro every second
@@ -972,8 +928,6 @@ void loop() {
 
     // resetting time for later
 }
-
-// below are the necessary functions here
 
 
 void calibrateESC(){
@@ -1002,7 +956,7 @@ void calibrateESC(){
 // for the ESCS
 void test()
 {
-    for (int i = MIN_PULSE_LENGTH; i <= 1900; i += 5) {
+    for (int i = MIN_PULSE_LENGTH; i <= 1400; i += 5) {
         Serial.print("Pulse length = ");
         Serial.println(i);
 
@@ -1085,5 +1039,3 @@ void readData(){
 
 
 }
-
-// Done with the first (rough) draft.
