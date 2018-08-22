@@ -338,32 +338,10 @@ void findPID(){
 }
 
 void loop() {
-
-
-
-
 // the main loop
 
-
 // start up drone here
-
-
-/*
-
-  // the pid setpoints are determined by the receiver inputs, and are in degrees per second.
-
-  rollSetpoint = 0;
-
-  */
-
-
-
-
-
   // request a character from the user
-
-
-
   float prevThrottle = throttleValue;
   float prevPitch = pitchValue;
   float prevYaw = yawValue;
@@ -574,7 +552,7 @@ void loop() {
       esc2.writeMicroseconds(throttle);
       esc3.writeMicroseconds(throttle);
       esc4.writeMicroseconds(throttle);
-      //delay(1000);
+      delay(200);
 
 
     }
