@@ -10,8 +10,10 @@
 #include <math.h>
 
 
+
 // written by Matthew Strong, sophomore at CU Boulder
 // CTO of Udana Systems, 2018
+// Code for the Udana HAWK
 
 // first 'version' is based on a drone that can be controlled by a keyboard, so we can do that
 // we have to have some kind of good way to have user keyboard input
@@ -222,7 +224,8 @@ void setup() {
 
     displayInstructions();
 
-    startingCode =0;
+    startingCode = 0;
+    // since the drone has not been started or calibrated at all yet
 
 
 
@@ -363,6 +366,8 @@ void loop() {
         // letters:
         // q, w, a, s, z, x, e, r
         // below are all the ascii codes for the keys that add functionality to the drone
+
+
         // roll - x
         // pitch - y
         // yaw - z
@@ -539,11 +544,6 @@ void loop() {
       //Serial.println(pitchValue);
       //Serial.println(rollValue);
       //Serial.println(yawValue);
-
-
-
-
-
       // after all of the edge cases, we can set the pidsetpoints to what the user has provided... then calibrate via the angle
       throttle = int(throttleValue);
       pitchSetpoint = pitchValue;
@@ -551,7 +551,6 @@ void loop() {
       rollSetpoint = rollValue;
 
       // here  is simply a test
-
       esc1.writeMicroseconds(throttle);
       esc2.writeMicroseconds(throttle);
       esc3.writeMicroseconds(throttle);
