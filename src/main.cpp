@@ -254,6 +254,7 @@ void setup() {
 }
 void displayInstructions()
 {
+    // displays all of the options for the user, only displays once so that it's not displaying over and over and over again.
     Serial.println("Welcome to the Udana HAWK Serial Console!");
     Serial.println("");
     Serial.println("Choose an Option:");
@@ -366,8 +367,6 @@ void loop() {
         // letters:
         // q, w, a, s, z, x, e, r
         // below are all the ascii codes for the keys that add functionality to the drone
-
-
         // roll - x
         // pitch - y
         // yaw - z
