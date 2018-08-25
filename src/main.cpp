@@ -31,8 +31,10 @@
 
 
 
-#define MIN_PULSE_LENGTH 1000 // Minimum pulse length in µs
+#define MIN_PULSE_LENGTH 1000
+// Minimum pulse length in µs
 #define MAX_PULSE_LENGTH 2000
+// Maximum pulse length in µs
 
 #define LED3 8
 #define LED2 7
@@ -94,7 +96,6 @@ unsigned long timerDrone;
 Adafruit_LSM9DS1 lsm = Adafruit_LSM9DS1();
 
 float gyroArr[4], accelerationArr[4];
-float keyboardRoll[1], keyboardPitch[1], keybaardYaw[1];
 // arrays for the roll, pitch and yaw for the keybpard
 float rollCalibration, pitchCalibration, yawCalibration;
 
@@ -167,27 +168,22 @@ void setup() {
     rollValue = 0.0;
     // setting all of the intermediate values to calculate the pitch, roll, yaw, and throttle
     // need to calibrate the gyros when the drone is stationary
-
-
     // must be stationary or the drone will not work!!!
 
-
-
-
     // setting the calbiration values - might package into a function here
-    Serial.println("Calibrating..");
+    Serial.println("Calibrating all of the gyro values to zero. Please have the drone stationary.");
     for(int i = 0; i< 2000; i++){
       readData();
       rollCalibration = rollCalibration + gyroArr[0];
       pitchCalibration = pitchCalibration + gyroArr[1];
       yawCalibration = yawCalibration + gyroArr[2];
-      delay(4);
+      delay(3);
       // delay 4 milliseconds
       // adding up all of the totals so that we can get the average
       // read the data and put the infomration into an array that is basically global to the whole program....
 
     }
-    Serial.println("Calibrated!");
+    Serial.println("Gyro values calibrated!");
     rollCalibration = rollCalibration/2000;
     pitchCalibration = pitchCalibration/2000;
     yawCalibration = yawCalibration/2000;
@@ -206,14 +202,9 @@ void setup() {
     esc3.attach(12, MIN_PULSE_LENGTH, MAX_PULSE_LENGTH);
     esc4.attach(11, MIN_PULSE_LENGTH, MAX_PULSE_LENGTH);
 
-    Serial.println("Calibrations...");
-
-
-
+    Serial.println("HAWK Beginning....");
     // now for calbrating and arming the escs (one still doesn't work..)
-
     //calibrateESC();
-
     // requires the user to plug in the battery
 
     // will allow the drone to be properly calibrated.
@@ -232,14 +223,13 @@ void setup() {
 
 
 
-    //batteryVoltage = (analogRead(0) + 65) * 1.2317;
+    batteryVoltage = (analogRead(0) + 65) * 1.2317;
 
 
 
 
 
-    //timerDrone = micros();
-
+    timerDrone = micros();
     // type of micros is unsigned long here
 
 
@@ -267,7 +257,7 @@ void displayInstructions()
     Serial.println("X - Down the Yaw");
     Serial.println("E - Up the Roll");
     Serial.println("R - Down the Roll");
-    Serial.println("");
+    Serial.println("===============================================");
     Serial.println("O - Stop the Drone (Don't do this in midair)");
     Serial.println("P - Go, get the drone to begin again");
     Serial.println("In the proto-prototype version instructions: ");
@@ -277,9 +267,7 @@ void displayInstructions()
 }
 
 // pid algorithm is here, once we have the desired user inputs we can calculate what pulse we must send to each of the motors
-
 // the input for the function will be in degrees per second
-
 // note that throttle is independent of these values, that really determines how far up the drone goes, not its x, y, or z orientation and desired
 // direction.
 void findPID(){
@@ -354,6 +342,7 @@ void loop() {
   float prevPitch = pitchValue;
   float prevYaw = yawValue;
   float prevRoll = rollValue;
+
   bool notCalibrating = true;
   // allow the user the see the options that they can do in order to control the drone
   // serial will be available with the raspberry pi
@@ -557,9 +546,7 @@ void loop() {
 
 
     }
-    // need to accommodate for the times when the user does nothing with the pid settings here....
 
-    // setpoints are set to what the roll value is..
 
     // things should be in degrees per seconds
 
@@ -599,10 +586,8 @@ void loop() {
     }
 
     // correcting for drift
-
     pitchSetpoint = pitchSetpoint - pitchAdjust;
     rollSetpoint = rollSetpoint - rollAdjust;
-    // compare the readings of the gyro vs the actual user input
 
     // input is subtracted from what the roll is expected at the stationary surface; that is, when all axes are at 0 ....
     // (0,0,0)
@@ -660,16 +645,16 @@ void loop() {
       if(esc4Value < 1050){
         esc4Value = 1050;
       }
-      if(esc1Value > 2000){
+      if(esc1Value >= 2000){
         esc1Value = 2000;
       }
-      if(esc2Value > 2000){
+      if(esc2Value >= 2000){
         esc2Value = 2000;
       }
-      if(esc3Value > 2000){
+      if(esc3Value >= 2000){
         esc3Value = 2000;
       }
-      if(esc4Value > 2000){
+      if(esc4Value >= 2000){
         esc4Value = 2000;
       }
       // the drone would have started HERE
@@ -943,7 +928,7 @@ void calibrateESC(){
   esc3.writeMicroseconds(MIN_PULSE_LENGTH);
   esc4.writeMicroseconds(MIN_PULSE_LENGTH);
   delay(4000);
-  Serial.print("Hopefully all four escs should be calibrated...");
+  Serial.print("Hopefully all four escs should be calibrated... and made the successful startup sound.");
   startingCode = 1;
   // 1 second delay should enable the esc to know where the max and min pulse are each at....
 
@@ -1019,7 +1004,7 @@ void readData(){
   float gyroZ = g.gyro.z * g.gyro.z;
   float xY = sqrtf(gyroX+gyroY);
   float xYNet = xY * xY;
-  // net gyro vector
+  // net gyro std::vector<int> v;
   float gyroResult = sqrtf(xYNet + gyroZ);
   gyroArr[0] = g.gyro.x;
   gyroArr[1] = g.gyro.y;
