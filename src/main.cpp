@@ -506,7 +506,6 @@ void loop() {
       if(prevRoll == rollValue){
         rollValue = 0;
         // roll was not changed
-
       }
 
       // account for edge cases
@@ -538,7 +537,6 @@ void loop() {
       if(yawValue < (-400)){
         yawValue = -400;
       }
-
       //Serial.println(throttle);
       //Serial.println(pitchValue);
       //Serial.println(rollValue);
@@ -554,6 +552,7 @@ void loop() {
       esc2.writeMicroseconds(throttle);
       esc3.writeMicroseconds(throttle);
       esc4.writeMicroseconds(throttle);
+      // delay of 200 millseconds - will need to bring down later so that more corrections are made per second
       delay(200);
 
 
@@ -566,18 +565,13 @@ void loop() {
 
 
     // reading in the data to get the right inputs
-
-
-
-
-    /*
-
     readData();
 
     // some code that I had to research that details the angles and whatnot
     // will need for later once the main pid controller works
 
     anglePitch = anglePitch + (gyroArr[0]* 0.0000611);
+
     angleRoll = angleRollAcc + (gyroArr[1]*0.0000611);
 
 
@@ -603,6 +597,9 @@ void loop() {
       pitchAdjust = 0;
       rollAdjust = 0;
     }
+
+    // correcting for drift
+
     pitchSetpoint = pitchSetpoint - pitchAdjust;
     rollSetpoint = rollSetpoint - rollAdjust;
     // compare the readings of the gyro vs the actual user input
@@ -620,12 +617,15 @@ void loop() {
     int highestThrottle = 1950;
     // throttle is a continous thing, tilting a part that's not throttle
     // will affect the pitch/yaw/roll
+
+    // if the drone is not flying, the code should reflect it, and as such, the startingCode should be 1
     if(startingCode == 1){
       if(throttle > highestThrottle){
         // fairly straightforward math right here
         throttle = highestThrottle;
       }
         //Calculate the pulse for esc 1 (front-right - CCW)
+
         esc1Value = throttle - pidPitchOutput + pidRollOutput - pidYawOutput;
         //Calculate the pulse for esc 2 (rear-right - CW)
         esc2Value = throttle + pidPitchOutput + pidRollOutput + pidYawOutput;
@@ -638,7 +638,8 @@ void loop() {
         // based on the direction that the motor needs to spin determines what need to
         // written to each of the escs
 
-
+      // in the case that the battery voltage is really low
+      // either that or everything fails
 
       if(batteryVoltage <1200 && batteryVoltage >700){
         float comp = (1200-batteryVoltage)/(float(3500));
@@ -685,16 +686,17 @@ void loop() {
       // not going to be moving anytime soon....
 
     }
-    // writing the neessary pulse to each individual ESC based on the pid controller as well as battery low voltage compensation
-
+    // writing the neessary pulse to each individual ESC based on the pid controller algorithm; each value is different
+    // due to taking into account direction
     esc1.writeMicroseconds(esc1Value);
     esc2.writeMicroseconds(esc2Value);
     esc3.writeMicroseconds(esc3Value);
     esc4.writeMicroseconds(esc4Value);
 
 
-    */
 
+
+// below is all test code that I was playing around with
 
 
   /*
@@ -874,7 +876,7 @@ void loop() {
 
   // write the escValues to each respective esc each time that this occurs..... read every 4 microseconds
 
-  // this code here is for only testing purposes and only to ensure that the motors are turning properly once that they are all attacehed
+  // this code here is is to best communication with the pi
 
   /*
   while(Serial.available()>0){
@@ -910,10 +912,6 @@ void loop() {
 
 
   // calculate the acceleration, magnetism, and gyro every second
-
-  // maybe use this delay for later....
-  //delay(1000);
-    // put your main code here, to run repeatedly:
     // currently I do not know the pulse in Hz of my ESC so I am assuming that my 30A ESC is 250 Hz, so every 4000 us we reset the timer.
     //while(micros() - timerDrone < 4000);
     // accounting for the extra time to have the rest of the pulse
@@ -926,9 +924,6 @@ void loop() {
 
     //timerDrone = micros();
 
-
-
-    // resetting time for later
 }
 
 
@@ -938,6 +933,7 @@ void calibrateESC(){
   esc3.writeMicroseconds(MAX_PULSE_LENGTH);
   esc4.writeMicroseconds(MAX_PULSE_LENGTH);
   Serial.print("Preparing to send min pulse for arming sequence... Plug in the battery now.");
+  // later ... have something that automatically handles this
   delay(4000);
   // wait 5 seconds before anything can happen
 
@@ -958,6 +954,8 @@ void calibrateESC(){
 // for the ESCS
 void test()
 {
+  // occurs after the drone's escs are calibrated.
+  // pulse of 1000 to 1400
     for (int i = MIN_PULSE_LENGTH; i <= 1400; i += 5) {
         Serial.print("Pulse length = ");
         Serial.println(i);
@@ -996,6 +994,7 @@ void readData(){
   float xAndy = sqrtf(accX + accY);
   float xyA = xAndy * xAndy;
   float accelerationResult = sqrtf(xyA + accZ);
+  // net acceleration vector
   accelerationArr[0] = a.acceleration.x;
   accelerationArr[1] = a.acceleration.y;
   accelerationArr[2] = a.acceleration.z;
@@ -1011,7 +1010,7 @@ void readData(){
   //Serial.print("\tZ: "); Serial.print(m.magnetic.z);     Serial.println(" gauss");
 
 
-
+  // degrees per second
   //Serial.print("Roll: "); Serial.print(g.gyro.x);   Serial.print(" dps");
   //Serial.print("Pitch: "); Serial.print(g.gyro.y);      Serial.print(" dps");
   //Serial.print("Yaw: "); Serial.print(g.gyro.z);      Serial.println(" dps");
@@ -1020,22 +1019,12 @@ void readData(){
   float gyroZ = g.gyro.z * g.gyro.z;
   float xY = sqrtf(gyroX+gyroY);
   float xYNet = xY * xY;
+  // net gyro vector
   float gyroResult = sqrtf(xYNet + gyroZ);
   gyroArr[0] = g.gyro.x;
   gyroArr[1] = g.gyro.y;
   gyroArr[2] = g.gyro.z;
   gyroArr[3] = gyroResult;
-  //Serial.println();
-  //Serial.println();
-  // just printing some extra lines here
-
-  // calculate the acceleration, magnetism, and gyro every second
-
-  // maybe use this delay for later....
-  //delay(1000);
-    // put your main code here, to run repeatedly:
-
-
 
 
 
