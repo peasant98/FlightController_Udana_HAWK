@@ -197,10 +197,10 @@ void setup() {
 
 
 
-    esc1.attach(10, MIN_PULSE_LENGTH, MAX_PULSE_LENGTH);
+    esc1.attach(11, MIN_PULSE_LENGTH, MAX_PULSE_LENGTH);
     esc2.attach(9, MIN_PULSE_LENGTH, MAX_PULSE_LENGTH);
-    esc3.attach(12, MIN_PULSE_LENGTH, MAX_PULSE_LENGTH);
-    esc4.attach(11, MIN_PULSE_LENGTH, MAX_PULSE_LENGTH);
+    esc3.attach(10, MIN_PULSE_LENGTH, MAX_PULSE_LENGTH);
+    esc4.attach(12, MIN_PULSE_LENGTH, MAX_PULSE_LENGTH);
 
     Serial.println("HAWK Beginning....");
     // now for calbrating and arming the escs (one still doesn't work..)
@@ -333,6 +333,34 @@ void findPID(){
 
 }
 
+
+
+
+
+
+
+
+
+
+//Calculate the pulse for esc 1 (front-right - CCW)
+// my case: esc C
+// pin 11
+
+//Calculate the pulse for esc 2 (rear-right - CW)
+// my case: esc B
+// pin 9
+
+
+//Calculate the pulse for esc 3 (rear-left - CCW)
+// my case: esc A
+// pin 10
+
+//Calculate the pulse for esc 4 (front-left - CW)
+// my case: esc D
+// pin 12
+
+
+
 void loop() {
 // the main loop
 
@@ -452,6 +480,7 @@ void loop() {
           esc3.writeMicroseconds(MAX_PULSE_LENGTH);
           esc4.writeMicroseconds(MAX_PULSE_LENGTH);
           // write max throttle
+          // won't go to the pid controller here though
           notCalibrating = false;
 
         }
@@ -537,6 +566,8 @@ void loop() {
       rollSetpoint = rollValue;
 
       // here  is simply a test
+
+
       esc1.writeMicroseconds(throttle);
       esc2.writeMicroseconds(throttle);
       esc3.writeMicroseconds(throttle);
@@ -565,7 +596,7 @@ void loop() {
     anglePitch -= angleRoll * sin(gyroArr[2] * 0.000001066);
     angleRoll += anglePitch * sin(gyroArr[2] * 0.000001066);
     if(abs(accelerationArr[1])< accelerationArr[3]){
-      anglePitchAcc = asin((float)accelerationArr[1]/accelerationArr[3])*57.2960;
+      anglePitchAcc = asin((float)accelerationArr[1]/accelerationArr[3])*(57.2960);
   }
     if(abs(accelerationArr[0])< accelerationArr[3]){
       angleRollAcc = asin((float)accelerationArr[0]/accelerationArr[3])* (-57.2960);
