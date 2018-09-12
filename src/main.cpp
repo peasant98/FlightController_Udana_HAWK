@@ -23,12 +23,6 @@
 // after calibrating the four escs (in which all four give the desired beep signals), the motors will stop in the middle of going from 1000 to 1500 microseconds
 // pulse. The reason is perhaps the battery; but could be related to how fast I given off the signals.... we will seeing
 
-// including all of the necessary libraries
-//#include "..\resources\Adafruit_Sensor.h"
-//#include "..\resources\Adafruit_LSM9DS1.h"
-
-
-
 #define MIN_PULSE_LENGTH 1000
 // Minimum pulse length in µs
 #define MAX_PULSE_LENGTH 2000
@@ -41,7 +35,6 @@
 // important values for keeping track of things
 
 float throttleValue, pitchValue, yawValue, rollValue;
-
 float angleRollAcc, anglePitchAcc, anglePitch, angleRoll;
 // p, i, and d settings for the roll
 float PgainRoll = 1.4;
@@ -62,42 +55,28 @@ float IgainYaw = 0.02;
 float DgainYaw = 0.0;
 
 int pidMaxYaw = pidMaxRoll;
-
-
 // boolean leveling = true;
 int accelerationX, accelerationY, accelerationZ, accelerationNet;
 int throttle;
 float batteryVoltage;
-
 float pidErrorTemp;
 float iMemRoll, iMemPitch, iMemYaw;
 float rollSetpoint, pitchSetpoint, yawSetpoint;
 float rollInputGyro, pitchInputGyro, yawInputGyro;
 float pidRollOutput, pidPitchOutput, pidYawOutput;
 float pidLastRoll_D_Error, pidLastPitch_D_Error, pidLastYaw_D_Error;
-
 Servo esc1, esc2, esc3, esc4;
-
 int esc1Value, esc2Value, esc3Value, esc4Value;
-
 char data;
-
 unsigned long timerDrone;
 // possibly the time for the drone currently
-
-
 Adafruit_LSM9DS1 lsm = Adafruit_LSM9DS1();
-
 // arrays for the roll, pitch and yaw for the keybpard
 float rollCalibration, pitchCalibration, yawCalibration;
-
 int startingCode;
-
 float rollAdjust, pitchAdjust;
-
 bool autoLeveling = true;
 // some arrays to keep track of gyro and acceleration so far
-
 // define any necessary pins here
 float gyroArr[4] = {0,0,0,0};
 float accArr[4] = {0, 0,0,0};
@@ -119,12 +98,10 @@ void setup() {
     Serial.begin(9600);
     // the primary sensor
     // seeing if the sensor works and is connected correctly
-
     if(!lsm.begin())
   {
-    /* There was a problem detecting the LSM9DS1 ... check your connections */
+    // issue with connecting
     Serial.println("Ooops, no LSM9DS1 detected ... Check your wiring!");
-
   }
   else{
     Serial.println("Success!");
@@ -138,7 +115,6 @@ void setup() {
     //lsm.setupMag(lsm.LSM9DS1_MAGGAIN_8GAUSS);
     //lsm.setupMag(lsm.LSM9DS1_MAGGAIN_12GAUSS);
     //lsm.setupMag(lsm.LSM9DS1_MAGGAIN_16GAUSS);
-
     // 3.) Setup the gyroscope
     lsm.setupGyro(lsm.LSM9DS1_GYROSCALE_245DPS);
     //lsm.setupGyro(lsm.LSM9DS1_GYROSCALE_500DPS);
@@ -165,8 +141,8 @@ void setup() {
       pitchCalibration = pitchCalibration + gyroArr[1];
       yawCalibration = yawCalibration + gyroArr[2];
       readData();
-      delay(3);
-      // delay 4 milliseconds
+      delay(2);
+      // delay 2  milliseconds just to indicate to the user that is takes time
       // adding up all of the totals so that we can get the average
       // read the data and put the infomration into an array that is basically global to the whole program....
     }
@@ -191,12 +167,10 @@ void setup() {
     // after this and the user has plugged in the drone we will be ready to begin
     // startingCode reset to account for this
     displayInstructions();
-
     startingCode = 0;
     // since the drone has not been started or calibrated at all yet
     /*
     batteryVoltage = (analogRead(0) + 65) * 1.2317;
-
     */
     //timerDrone = micros();
     // type of micros is unsigned long here
@@ -205,7 +179,6 @@ void setup() {
     // setting up all of the lights based on the direction that is selected by the user
     // pin mode for a led light to caclulate acceleration
   }
-
 }
 void displayInstructions()
 {
@@ -234,7 +207,6 @@ void displayInstructions()
 // note that throttle is independent of these values, that really determines how far up the drone goes, not its x, y, or z orientation and desired
 // direction.
 void findPID(){
-
   pidErrorTemp = rollInputGyro - rollSetpoint;
   // calculating the big boy, the p, which accounts for the most work
   // roll error, input - what we actually want
@@ -257,7 +229,6 @@ void findPID(){
 
   // end of pitch. If we lived in a one-dimensional world, we would be done.
   // but alas, we are not!
-
   pidErrorTemp = pitchInputGyro - pitchSetpoint;
   iMemPitch += IgainPitch * pidErrorTemp;
   // the intergral pitch is the gain multiplied by the error so far
@@ -319,7 +290,6 @@ void loop() {
   float prevPitch = pitchValue;
   float prevYaw = yawValue;
   float prevRoll = rollValue;
-
   bool notCalibrating = true;
   // allow the user the see the options that they can do in order to control the drone
   // serial will be available with the raspberry pi
@@ -337,27 +307,22 @@ void loop() {
         if(data == 113){
           throttleValue+=20.0;
           notCalibrating = true;
-
         }
         else if(data == 119){
           throttleValue-=20.0;
           notCalibrating = true;
-
         }
         else if(data == 97){
           pitchValue+=20.0;
           notCalibrating = true;
-
         }
         else if(data == 115){
           pitchValue-=20.0;
           notCalibrating = true;
-
         }
         else if(data == 122){
           yawValue+=20.0;
           notCalibrating = true;
-
         }
         else if(data == 120){
           yawValue-=20.0;
@@ -366,7 +331,6 @@ void loop() {
         else if(data == 101){
           rollValue+=20.0;
           notCalibrating = true;
-
         }
         else if(data == 114){
           rollValue-=20.0;
@@ -399,7 +363,6 @@ void loop() {
             // resetting all of the pid values when everything is restarted.
             Serial.print("Restarting the HAWK from being STATIONARY...");
             // the HAWK has already been calibrated at this point in the program though
-            // we can begin from here
             startingCode = 1;
           }
           else{
@@ -408,26 +371,24 @@ void loop() {
         }
         else if(data == 48){
           Serial.println("Sending minimum throttle");
-          esc1.writeMicroseconds(1000);
-          esc2.writeMicroseconds(1000);
-          esc3.writeMicroseconds(1000);
-          esc4.writeMicroseconds(1000);
+          esc1.writeMicroseconds(MIN_PULSE_LENGTH);
+          esc2.writeMicroseconds(MIN_PULSE_LENGTH);
+          esc3.writeMicroseconds(MIN_PULSE_LENGTH);
+          esc4.writeMicroseconds(MIN_PULSE_LENGTH);
           Serial.println("Sent!");
           // write minimum throttle
           notCalibrating = false;
-
         }
         else if(data == 49){
           Serial.println("Sending maximum throttle");
-          esc1.writeMicroseconds(2000);
-          esc2.writeMicroseconds(2000);
-          esc3.writeMicroseconds(2000);
-          esc4.writeMicroseconds(2000);
+          esc1.writeMicroseconds(MAX_PULSE_LENGTH);
+          esc2.writeMicroseconds(MAX_PULSE_LENGTH);
+          esc3.writeMicroseconds(MAX_PULSE_LENGTH);
+          esc4.writeMicroseconds(MAX_PULSE_LENGTH);
           Serial.println("Sent!");
           // write max throttle
           // won't go to the pid controller here though
           notCalibrating = false;
-
         }
         else if(data == 50){
           Serial.print("Running test in 3");
@@ -440,23 +401,10 @@ void loop() {
           // conduct the testing and starting up the drone
           notCalibrating = false;
           startingCode = 1;
-
         }
         // all other cases are just ignored.
-
-
-
-        // change up the code here without switch statements
-
-
+        // change up the code here without switch statemen
     }
-
-
-    /*
-
-
-
-
     if(notCalibrating and startingCode == 1){
       // the drone must be at the startingCode of 1 to be able to be written a pulse too
       if(prevThrottle == throttleValue){
@@ -466,28 +414,23 @@ void loop() {
       if(prevPitch == pitchValue){
         // pitch was not changed
         pitchValue = 0;
-
       }
       if(prevYaw == yawValue){
         yawValue = 0;
         // yaw was not changed
-
       }
       if(prevRoll == rollValue){
         rollValue = 0;
         // roll was not changed
       }
-
       // account for edge cases
       // need to get to degrees per second...
-
       if(throttleValue >= 1950){
         throttleValue = 1950;
       }
       if(throttleValue < (1000)){
         throttleValue = 1000;
       }
-
       if(pitchValue > 400){
         pitchValue = 400;
       }
@@ -516,22 +459,16 @@ void loop() {
       pitchSetpoint = pitchValue;
       yawSetpoint = yawValue;
       rollSetpoint = rollValue;
-
-
       // original motor test
       //esc1.writeMicroseconds(throttle);
       //esc2.writeMicroseconds(throttle);
       //esc3.writeMicroseconds(throttle);
       //esc4.writeMicroseconds(throttle);
-
-
       // delay of 200 millseconds - will need to bring down later so that more corrections are made per second
     }
     // things should be in degrees per second
     // reading in the data to get the right inputs
-
     readData();
-
     // some code that I had to research that details the angles and whatnot
     // will need for later once the main pid controller works
 
@@ -550,8 +487,7 @@ void loop() {
     }
     anglePitch = anglePitch * 0.9997 + anglePitchAcc * 0.0003;            //Correct the drift of the gyro pitch angle with the accelerometer pitch angle.
     angleRoll = angleRoll * 0.9997 + angleRollAcc * 0.0003;
-
-                   //Correct the drift of the gyro roll angle with the accelerometer roll angle.
+    //Correct the drift of the gyro roll angle with the accelerometer roll angle.
     pitchAdjust = anglePitch * 15;
     rollAdjust = angleRoll * 15;
     // will have to modify values of these later
@@ -561,28 +497,18 @@ void loop() {
     }
     pitchSetpoint = pitchSetpoint - pitchAdjust;
     rollSetpoint = rollSetpoint - rollAdjust;
-
     */
 
     // input is subtracted from what the roll is expected at the stationary surface; that is, when all axes are at 0 ....
 
-
-
-
-
-    /*
     rollInputGyro = gyroArr[0] - rollCalibration;
     pitchInputGyro = gyroArr[1] - pitchCalibration;
     yawInputGyro = gyroArr[2] - yawCalibration;
     findPID();
-
-
-
     // getting to an actual motor reading HERE
     int highestThrottle = 1950;
     // throttle is a continous thing, tilting a part that's not throttle
     // will affect the pitch/yaw/roll
-
     // if the drone is not flying, the code should reflect it, and as such, the startingCode should be 1
     if(startingCode == 1){
       if(throttle >= highestThrottle){
@@ -590,7 +516,6 @@ void loop() {
         throttle = highestThrottle;
       }
         //Calculate the pulse for esc 1 (front-right - CCW)
-
         esc1Value = throttle - pidPitchOutput + pidRollOutput - pidYawOutput;
         //Calculate the pulse for esc 2 (rear-right - CW)
         esc2Value = throttle + pidPitchOutput + pidRollOutput + pidYawOutput;
@@ -605,13 +530,14 @@ void loop() {
 
       // in the case that the battery voltage is really low
       // either that or everything fails
+      /*
 
       if(batteryVoltage <1200 && batteryVoltage >700){
         float comp = (1200-batteryVoltage)/(float(3500));
         esc1Value  = esc1Value * (comp);
-
         // quite low voltage too - bring pulse down due to voltage drop
       }
+      */
 
       if(esc1Value <= 1050){
         esc1Value = 1050;
@@ -625,7 +551,6 @@ void loop() {
       if(esc4Value <= 1050){
         esc4Value = 1050;
       }
-      // checking for the outer bounds on the esc values
       if(esc1Value >= highestThrottle){
         esc1Value = highestThrottle;
       }
@@ -638,8 +563,6 @@ void loop() {
       if(esc4Value >= highestThrottle){
         esc4Value = highestThrottle;
       }
-      // the drone would have started HERE
-
     }
     else{
       // case where startingCode is 0
@@ -647,23 +570,17 @@ void loop() {
       esc2Value = 1000;
       esc3Value = 1000;
       esc4Value = 1000;
-
-      // the starting code here is 0, so we can safely assume that the drone is
-      // not going to be moving anytime soon....
-
     }
-    // writing the neessary pulse to each individual ESC based on the pid controller algorithm; each value is different
+    // writing the necessary pulse to each individual ESC based on the pid controller algorithm; each value is different
     // due to taking into account direction
-    esc1.writeMicroseconds(esc1Value);
-    esc2.writeMicroseconds(esc2Value);
-    esc3.writeMicroseconds(esc3Value);
-    esc4.writeMicroseconds(esc4Value);
 
-
-    */
-
-    //delay(200);
-
+    if(notCalibrating){
+      esc1.writeMicroseconds(esc1Value);
+      esc2.writeMicroseconds(esc2Value);
+      esc3.writeMicroseconds(esc3Value);
+      esc4.writeMicroseconds(esc4Value);
+    }
+    delay(200);
 // below is all test code that I was playing around with
   /*
 
@@ -675,8 +592,7 @@ void loop() {
   rollSetpoint = rollSetpoint - rollAdjust;
   // accounting for the roll and pitch adjustments based on angles
   // we need to look more into this and see if any dividing needs to be done as per the PID controller
-
-
+  
   if(abs(acc_y) < acc_total_vector){                                        //Prevent the asin function to produce a NaN
     angle_pitch_acc = asin((float)acc_y/acc_total_vector)* 57.296;          //Calculate the pitch angle.
   }
@@ -933,15 +849,10 @@ void test()
     esc4.writeMicroseconds(MIN_PULSE_LENGTH);
 }
 
-
-
 void readData(){
-
   sensors_event_t a, m, g, temp;
-
   lsm.getEvent(&a, &m, &g, &temp);
-  // getthing even of each sensor, and each one will have it's own values
-
+  // getthing even of each sensor, and each one will have it's own value
   //Serial.print("Accel X: "); Serial.print(a.acceleration.x); Serial.print(" m/s^2");
   //Serial.print("\tY: "); Serial.print(a.acceleration.y);     Serial.print(" m/s^2 ");
   //Serial.print("\tZ: "); Serial.print(a.acceleration.z);     Serial.println(" m/s^2 ");
@@ -969,8 +880,6 @@ void readData(){
   //Serial.print("Magnetic field X: "); Serial.print(m.magnetic.x);   Serial.print(" gauss");
   //Serial.print("\tY: "); Serial.print(m.magnetic.y);     Serial.print(" gauss");
   //Serial.print("\tZ: "); Serial.print(m.magnetic.z);     Serial.println(" gauss");
-
-
   // degrees per second
   //Serial.print("Roll: "); Serial.print(g.gyro.x);   Serial.print(" dps");
   //Serial.print("Pitch: "); Serial.print(g.gyro.y);      Serial.print(" dps");
