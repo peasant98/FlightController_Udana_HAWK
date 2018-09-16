@@ -146,6 +146,7 @@ void setup() {
       // adding up all of the totals so that we can get the average
       // read the data and put the infomration into an array that is basically global to the whole program....
     }
+    // what is currently being displayed on the raspberry pi
     rollCalibration = rollCalibration/2000;
     pitchCalibration = pitchCalibration/2000;
     yawCalibration = yawCalibration/2000;
@@ -176,8 +177,6 @@ void setup() {
     // type of micros is unsigned long here
     // amount in the battery
     // all steps before doing anything
-    // setting up all of the lights based on the direction that is selected by the user
-    // pin mode for a led light to caclulate acceleration
   }
 }
 void displayInstructions()
@@ -199,9 +198,8 @@ void displayInstructions()
     Serial.println("P - Go, get the drone to begin again");
     Serial.println("0 : Send min throttle");
     Serial.println("1 : Send max throttle");
-    Serial.println("2 : Run test function\n");
+    Serial.println("2 : Run test function");
 }
-
 // pid algorithm is here, once we have the desired user inputs we can calculate what pulse we must send to each of the motors
 // the input for the function will be in degrees per second
 // note that throttle is independent of these values, that really determines how far up the drone goes, not its x, y, or z orientation and desired
@@ -211,6 +209,7 @@ void findPID(){
   // calculating the big boy, the p, which accounts for the most work
   // roll error, input - what we actually want
   iMemRoll += IgainRoll * pidErrorTemp;
+
   // accounting for too high intergral roll
   if(iMemRoll > pidMaxRoll){
     iMemRoll = pidMaxRoll;
@@ -226,13 +225,11 @@ void findPID(){
     pidRollOutput = (pidMaxRoll * -1);
   }
   pidLastRoll_D_Error = pidErrorTemp;
-
   // end of pitch. If we lived in a one-dimensional world, we would be done.
-  // but alas, we are not!
+  // but alas, we are not
   pidErrorTemp = pitchInputGyro - pitchSetpoint;
   iMemPitch += IgainPitch * pidErrorTemp;
   // the intergral pitch is the gain multiplied by the error so far
-
   if(iMemPitch > pidMaxPitch){
     iMemPitch = pidMaxPitch;
   }
@@ -262,7 +259,6 @@ void findPID(){
   // pidYawOutput
   // pidRollOutput
   // pidPitchOutput
-
 }
 
 //Calculate the pulse for esc 1 (front-right - CCW)
@@ -282,7 +278,6 @@ void findPID(){
 // pin 12
 
 void loop() {
-// the main loop
 
 // start up drone here
   // request a character from the user
@@ -294,7 +289,7 @@ void loop() {
   // allow the user the see the options that they can do in order to control the drone
   // serial will be available with the raspberry pi
   if (Serial.available()) {
-        // need to modify this on the raspberry pi
+        // received from raspberry pi
         data = Serial.read();
         Serial.print("Received the code: ");
         Serial.println(data, DEC);
@@ -303,7 +298,7 @@ void loop() {
         // below are all the ascii codes for the keys that add functionality to the drone
         // roll - x
         // pitch - y
-        // yaw - z
+        // yaw - zc
         if(data == 113){
           throttleValue+=20.0;
           notCalibrating = true;
@@ -375,7 +370,6 @@ void loop() {
           esc2.writeMicroseconds(MIN_PULSE_LENGTH);
           esc3.writeMicroseconds(MIN_PULSE_LENGTH);
           esc4.writeMicroseconds(MIN_PULSE_LENGTH);
-          Serial.println("Sent!");
           // write minimum throttle
           notCalibrating = false;
         }
@@ -385,9 +379,7 @@ void loop() {
           esc2.writeMicroseconds(MAX_PULSE_LENGTH);
           esc3.writeMicroseconds(MAX_PULSE_LENGTH);
           esc4.writeMicroseconds(MAX_PULSE_LENGTH);
-          Serial.println("Sent!");
           // write max throttle
-          // won't go to the pid controller here though
           notCalibrating = false;
         }
         else if(data == 50){
@@ -450,10 +442,6 @@ void loop() {
       if(yawValue <= (-400)){
         yawValue = -400;
       }
-      //Serial.println(throttle);
-      //Serial.println(pitchValue);
-      //Serial.println(rollValue);
-      //Serial.println(yawValue);
       // after all of the edge cases, we can set the pidsetpoints to what the user has provided... then calibrate via the angle
       throttle = int(throttleValue);
       pitchSetpoint = pitchValue;
@@ -471,9 +459,7 @@ void loop() {
     readData();
     // some code that I had to research that details the angles and whatnot
     // will need for later once the main pid controller works
-
     /*
-
     anglePitch = anglePitch + (gyroArr[0]* 0.0000611);
 
     angleRoll = angleRollAcc + (gyroArr[1]*0.0000611);
@@ -498,19 +484,16 @@ void loop() {
     pitchSetpoint = pitchSetpoint - pitchAdjust;
     rollSetpoint = rollSetpoint - rollAdjust;
     */
-
     // input is subtracted from what the roll is expected at the stationary surface; that is, when all axes are at 0 ....
-
     rollInputGyro = gyroArr[0] - rollCalibration;
     pitchInputGyro = gyroArr[1] - pitchCalibration;
     yawInputGyro = gyroArr[2] - yawCalibration;
     findPID();
-    // getting to an actual motor reading HERE
     int highestThrottle = 1950;
     // throttle is a continous thing, tilting a part that's not throttle
     // will affect the pitch/yaw/roll
     // if the drone is not flying, the code should reflect it, and as such, the startingCode should be 1
-    if(startingCode == 1){
+    if(startingCode == 1 and notCalibrating==true){
       if(throttle >= highestThrottle){
         // fairly straightforward math right here
         throttle = highestThrottle;
@@ -525,20 +508,13 @@ void loop() {
 
         //Calculate the pulse for esc 4 (front-left - CW)
         esc4Value = throttle - pidPitchOutput - pidRollOutput + pidYawOutput;
-        // based on the direction that the motor needs to spin determines what need to
-        // written to each of the escs
-
-      // in the case that the battery voltage is really low
-      // either that or everything fails
       /*
-
       if(batteryVoltage <1200 && batteryVoltage >700){
         float comp = (1200-batteryVoltage)/(float(3500));
         esc1Value  = esc1Value * (comp);
         // quite low voltage too - bring pulse down due to voltage drop
       }
       */
-
       if(esc1Value <= 1050){
         esc1Value = 1050;
       }
@@ -564,8 +540,8 @@ void loop() {
         esc4Value = highestThrottle;
       }
     }
-    else{
-      // case where startingCode is 0
+    else if (notCalibrating==true && startingCode==0){
+      // case where startingCode is 0 - the
       esc1Value = 1000;
       esc2Value = 1000;
       esc3Value = 1000;
@@ -573,14 +549,16 @@ void loop() {
     }
     // writing the necessary pulse to each individual ESC based on the pid controller algorithm; each value is different
     // due to taking into account direction
-
-    if(notCalibrating){
+    if(notCalibrating and startingCode == 1){
+      // when the escs are being calibrated, we don't want to execute this line of code.
       esc1.writeMicroseconds(esc1Value);
       esc2.writeMicroseconds(esc2Value);
       esc3.writeMicroseconds(esc3Value);
       esc4.writeMicroseconds(esc4Value);
     }
     delay(200);
+    // just a simple delay
+
 // below is all test code that I was playing around with
   /*
 
@@ -592,7 +570,7 @@ void loop() {
   rollSetpoint = rollSetpoint - rollAdjust;
   // accounting for the roll and pitch adjustments based on angles
   // we need to look more into this and see if any dividing needs to be done as per the PID controller
-  
+
   if(abs(acc_y) < acc_total_vector){                                        //Prevent the asin function to produce a NaN
     angle_pitch_acc = asin((float)acc_y/acc_total_vector)* 57.296;          //Calculate the pitch angle.
   }
@@ -643,21 +621,6 @@ void loop() {
 
   // somewhere around here allow the drone to be autoleveling
 
-  // will change the values in the gyroArr loop
-
-  // all of the setpoints are determined by the input from the receiver, in this case, the key press on the keyboard.
-
-  rollInputGyro = gyroArr[0] - rollCalibration;
-  pitchInputGyro = gyroArr[1] - pitchCalibration;
-  yawInputGyro = gyroArr[2] - yawCalibration;
-
-  findPID();
-
-
-  // the calculate PID function in all of it's glor....
-  // the inputs for this function will be the inputs of the gyro that are read in
-  // as well as the setpoints from the hypothetical receivers, in this case....
-  // the key press of the keybaard connected to raspberry pi
 
   batteryVoltage = batteryVoltage * 0.92 + (analogRead(0) + 65) * 0.09853;
 
@@ -746,9 +709,6 @@ void loop() {
 
 */
 
-
-
-
 // END OF CODE.......
 
 
@@ -803,8 +763,6 @@ void loop() {
     //timerDrone = micros();
 
 }
-
-
 void calibrateESC(){
   esc1.writeMicroseconds(MAX_PULSE_LENGTH);
   esc2.writeMicroseconds(MAX_PULSE_LENGTH);
@@ -823,8 +781,6 @@ void calibrateESC(){
   // 1 second delay should enable the esc to know where the max and min pulse are each at....
 
 }
-
-
 // a simple testing function to go from the minimum to maximum pulse length
 // for the ESCS
 void test()
