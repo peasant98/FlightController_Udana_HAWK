@@ -11,13 +11,10 @@
 
 // written by Matthew Strong, sophomore at CU Boulder
 // CTO of Udana Systems, 2018
-// Code for the Udana HAWK
+// Code for the Udana HAWK Drone
 
 // first 'version' is based on a drone that can be controlled by a keyboard, so we can do that
 // we have to have some kind of good way to have user keyboard input
-
-// I will create the PID controller and algorithm for handling the necessary aspects here
-// and add the code here (the Adafruit LSM9DSL) is already working perfectly here
 
 // issues thus far:
 // after calibrating the four escs (in which all four give the desired beep signals), the motors will stop in the middle of going from 1000 to 1500 microseconds
@@ -173,7 +170,7 @@ void setup() {
     /*
     batteryVoltage = (analogRead(0) + 65) * 1.2317;
     */
-    //timerDrone = micros();
+    timerDrone = micros();
     // type of micros is unsigned long here
     // amount in the battery
     // all steps before doing anything
@@ -549,6 +546,11 @@ void loop() {
     }
     // writing the necessary pulse to each individual ESC based on the pid controller algorithm; each value is different
     // due to taking into account direction
+
+    while(micros() - timerDrone < 5000);                                      //We wait until 4000us are passed.
+    timerDrone = micros();
+
+
     if(notCalibrating and startingCode == 1){
       // when the escs are being calibrated, we don't want to execute this line of code.
       esc1.writeMicroseconds(esc1Value);
@@ -556,8 +558,12 @@ void loop() {
       esc3.writeMicroseconds(esc3Value);
       esc4.writeMicroseconds(esc4Value);
     }
-    delay(200);
-    // just a simple delay
+
+
+    //delay(200);
+
+    
+    // just a simple delay, will need microsecond timer later
 
 // below is all test code that I was playing around with
   /*
