@@ -21,7 +21,7 @@
 // Maximum pulse length in µs
 
 
-// important values for keeping track of things
+// important values for keePINg track of things
 
 float throttleValue, pitchValue, yawValue, rollValue;
 float angleRollAcc, anglePitchAcc, anglePitch, angleRoll;
@@ -66,7 +66,7 @@ int startingCode;
 float rollAdjust, pitchAdjust;
 bool autoLeveling = true;
 // some arrays to keep track of gyro and acceleration so far
-// define any necessary pins here
+// define any necessary PINs here
 float gyroArr[4] = {0,0,0,0};
 float accArr[4] = {0, 0,0,0};
 // declaring functions in advance
@@ -108,7 +108,7 @@ void setup() {
     lsm.setupGyro(lsm.LSM9DS1_GYROSCALE_245DPS);
     //lsm.setupGyro(lsm.LSM9DS1_GYROSCALE_500DPS);
     //lsm.setupGyro(lsm.LSM9DS1_GYROSCALE_2000DPS);
-    //pinMode(LED3, OUTPUT);
+    //PINMode(LED3, OUTPUT);
     //pinMode(LED2, OUTPUT);
     //pinMode(LED1, OUTPUT);
     //pinMode(LED0, OUTPUT);
@@ -263,6 +263,15 @@ void findPID(){
 //Calculate the pulse for esc 4 (front-left - CW)
 // my case: esc D
 // PIN 12
+
+
+
+  //The refresh rate is 250Hz. That means the esc's need there pulse every 4ms.
+  // the refresh rate of the 30A BLD escs is 50 - 60 Hz
+  // 1/250  = 4ms
+  //escs need pulse every 20ms
+  // higher refresh rate - 60  - 1/60 -> 16.6ms -> round to
+  // 17ms
 void loop() {
   // request a character from the user
   float prevThrottle = throttleValue;
@@ -397,7 +406,7 @@ void loop() {
       }
       if(prevRoll == rollValue){
         rollValue = 0;
-        // roll was not changed
+        // roll was not changed, will stabilize back to 0 then
       }
       // need to get to degrees per second...
       if(throttleValue >= 1950){
@@ -430,8 +439,7 @@ void loop() {
       yawSetpoint = yawValue;
       rollSetpoint = rollValue;
     }
-    // pid input should be in degrees per second
-    // reading in the data to get the right inputs
+    // pid input should be in degrees per second,   reading in the data to get the right inputs
     readData();
     /*
     anglePitch = anglePitch + (gyroArr[0]* 0.0000611);
@@ -471,13 +479,13 @@ void loop() {
         // fairly straightforward math right here
         throttle = highestThrottle;
       }
-        //Calculate the pulse for esc 1 (front-right - CCW)
+        //Calculate the pulse for esc 1 (front-right - CCW), PIN 11, esc C
         esc1Value = throttle - pidPitchOutput + pidRollOutput - pidYawOutput;
-        //Calculate the pulse for esc 2 (rear-right - CW)
+        //Calculate the pulse for esc 2 (rear-right - CW), PIN 9, esc B
         esc2Value = throttle + pidPitchOutput + pidRollOutput + pidYawOutput;
-        //Calculate the pulse for esc 3 (rear-left - CCW)
+        //Calculate the pulse for esc 3 (rear-left - CCW), PIN 10, esc A
         esc3Value = throttle + pidPitchOutput - pidRollOutput - pidYawOutput;
-        //Calculate the pulse for esc 4 (front-left - CW)
+        //Calculate the pulse for esc 4 (front-left - CW), PIN 12, esc D
         esc4Value = throttle - pidPitchOutput - pidRollOutput + pidYawOutput;
       /*
       if(batteryVoltage <1200 && batteryVoltage >700){
@@ -520,8 +528,9 @@ void loop() {
     }
     // writing the necessary pulse to each individual ESC based on the pid controller algorithm; each value is different
     // due to taking into account direction
-    //We wait until 6000us are passed - generous amount
-    while(micros() - timerDrone < 6000);
+    // the refresh rate of these escs is 50-60 Hz - take the lower end of it and have a loop that runs every 20,000us because that
+    // is the max interval to send pulse to escs
+    while(micros() - timerDrone < 20000);
     timerDrone = micros();
     if(notCalibrating and startingCode == 1){
       // when the escs are being calibrated, we don't want to execute this line of code.
@@ -530,8 +539,7 @@ void loop() {
       esc3.writeMicroseconds(esc3Value);
       esc4.writeMicroseconds(esc4Value);
     }
-    //delay(200);
-    // just a simple delay, will need microsecond timer later
+    //delay(200); // just a simple delay, will need microsecond timer later
   /*
   if(!autoLeveling){
     pitchAdjust = 0;
@@ -600,27 +608,15 @@ void loop() {
     int mystring = Serial.read();
     String varx = "";
     varx = varx + char(mystring);
-    //Serial.println(char(mystring));
     int myInter = varx.toInt();
     if(myInter == 1){
       digitalWrite(LED3, LOW);
-      digitalWrite(LED2, LOW);
-      digitalWrite(LED1, LOW);
-      digitalWrite(LED0, LOW);
     }
     else{
       digitalWrite(myInter, HIGH);
     }
   }
   */
-  // calculate the acceleration, magnetism, and gyro every second
-    // currently I do not know the pulse in Hz of my ESC so I am assuming that my 30A ESC is 250 Hz, so every 4000 us we reset the timer.
-    //while(micros() - timerDrone < 4000);
-    // accounting for the extra time to have the rest of the pulse
-
-    // need to be able to check the pulse of esc in order to do stuff
-    // simply having some waiting tiem herr, we will see if we need this late
-    //timerDrone = micros();
 }
 void calibrateESC(){
   esc1.writeMicroseconds(MAX_PULSE_LENGTH);
@@ -638,7 +634,6 @@ void calibrateESC(){
   Serial.print("Hopefully all four escs should be calibrated... and made the successful startup sound.");
   startingCode = 1;
   // 1 second delay should enable the esc to know where the max and min pulse are each at....
-
 }
 // a simple testing function to go from the minimum to maximum pulse length
 void test()
@@ -678,7 +673,6 @@ void readData(){
   accArr[1] = a.acceleration.y;
   accArr[2] = a.acceleration.z;
   accArr[3] = accelerationResult;
-
   //Serial.print("The 3-d vector for acceleration is: "); Serial.print(accelerationResult); Serial.println("m/s^2 ");
   // printing out all of the values
   //Serial.print("Magnetic field X: "); Serial.print(m.magnetic.x);   Serial.print(" gauss");
@@ -698,7 +692,4 @@ void readData(){
   gyroArr[1] = g.gyro.y;
   gyroArr[2] = g.gyro.z;
   gyroArr[3] = gyroResult;
-
-
-
 }
