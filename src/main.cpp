@@ -130,12 +130,11 @@ void setup() {
       pitchCalibration = pitchCalibration + gyroArr[1];
       yawCalibration = yawCalibration + gyroArr[2];
       readData();
-      delay(2);
-      // delay 2  milliseconds just to indicate to the user that is takes time
+      delay(4);
+      // delay 4  milliseconds just to indicate to the user that is takes time
       // adding up all of the totals so that we can get the average
-      // read the data and put the infomration into an array that is basically global to the whole program....
+      // read the data and put the information into an array that is basically global to the whole program....
     }
-    // what is currently being displayed on the raspberry pi
     rollCalibration = rollCalibration/2000;
     pitchCalibration = pitchCalibration/2000;
     yawCalibration = yawCalibration/2000;
@@ -159,9 +158,8 @@ void setup() {
     displayInstructions();
     startingCode = 0;
     // since the drone has not been started or calibrated at all yet
-    /*
-    batteryVoltage = (analogRead(0) + 65) * 1.2317;
-    */
+
+    //batteryVoltage = (analogRead(0) + 65) * 1.2317;
     timerDrone = micros();
     // type of micros is unsigned long here
     // amount in the battery
@@ -176,14 +174,13 @@ void displayInstructions()
     Serial.println("Choose an Option:");
     Serial.println("Q - Increase the Throttle");
     Serial.println("W - Decrease the Throttle");
-    // throttle options either bring it down or bring it up....
     Serial.println("A - Up the Pitch");
     Serial.println("S - Down the Pitch");
     Serial.println("Z - Up the Yaw");
     Serial.println("X - Down the Yaw");
     Serial.println("E - Up the Roll");
     Serial.println("R - Down the Roll");
-    Serial.println("O - Stop the Drone (Don't do this in midair)");
+    Serial.println("O - Stop the Drone (Don't do this in midair!)");
     Serial.println("P - Go, get the drone to begin again");
     Serial.println("0 : Send min throttle");
     Serial.println("1 : Send max throttle");
@@ -198,7 +195,6 @@ void findPID(){
   // calculating the big boy, the p, which accounts for the most work
   // roll error, input - what we actually want
   iMemRoll += IgainRoll * pidErrorTemp;
-
   // accounting for too high intergral roll
   if(iMemRoll > pidMaxRoll){
     iMemRoll = pidMaxRoll;
@@ -218,7 +214,7 @@ void findPID(){
   // but alas, we are not
   pidErrorTemp = pitchInputGyro - pitchSetpoint;
   iMemPitch += IgainPitch * pidErrorTemp;
-  // the intergral pitch is the gain multiplied by the error so far
+  // the integral pitch is the gain multiplied by the error so far and the gain, which is set manually and has to be tuned
   if(iMemPitch > pidMaxPitch){
     iMemPitch = pidMaxPitch;
   }
@@ -264,16 +260,11 @@ void findPID(){
 // my case: esc D
 // PIN 12
 
-
-
-  //The refresh rate is 250Hz. That means the esc's need there pulse every 4ms.
   // the refresh rate of the 30A BLD escs is 50 - 60 Hz
-  // 1/250  = 4ms
-  //escs need pulse every 20ms
+  //escs need pulse every 1/50 = 20ms
   // higher refresh rate - 60  - 1/60 -> 16.6ms -> round to
   // 17ms
 void loop() {
-  // request a character from the user
   float prevThrottle = throttleValue;
   float prevPitch = pitchValue;
   float prevYaw = yawValue;
@@ -282,7 +273,7 @@ void loop() {
   // allow the user the see the options that they can do in order to control the drone
   // serial will be available with the raspberry pi
   if (Serial.available()) {
-        // received from raspberry pi
+        // received from raspberry pi via wireless keyboard input
         data = Serial.read();
         Serial.print("Received the code: ");
         Serial.println(data, DEC);
@@ -363,7 +354,6 @@ void loop() {
           esc2.writeMicroseconds(MIN_PULSE_LENGTH);
           esc3.writeMicroseconds(MIN_PULSE_LENGTH);
           esc4.writeMicroseconds(MIN_PULSE_LENGTH);
-          // write minimum throttle
           notCalibrating = false;
         }
         else if(data == 49){
@@ -372,7 +362,6 @@ void loop() {
           esc2.writeMicroseconds(MAX_PULSE_LENGTH);
           esc3.writeMicroseconds(MAX_PULSE_LENGTH);
           esc4.writeMicroseconds(MAX_PULSE_LENGTH);
-          // write max throttle
           notCalibrating = false;
         }
         else if(data == 50){
@@ -409,6 +398,8 @@ void loop() {
         // roll was not changed, will stabilize back to 0 then
       }
       // need to get to degrees per second...
+      // below code ensures that the throttle, pitch, roll, and yaw do not go out of the bounds of the
+      // max values - and that the drone does not tip over.
       if(throttleValue >= 1950){
         throttleValue = 1950;
       }
@@ -443,7 +434,6 @@ void loop() {
     readData();
     /*
     anglePitch = anglePitch + (gyroArr[0]* 0.0000611);
-
     angleRoll = angleRollAcc + (gyroArr[1]*0.0000611);
     anglePitch -= angleRoll * sin(gyroArr[2] * 0.000001066);
     angleRoll += anglePitch * sin(gyroArr[2] * 0.000001066);
@@ -487,11 +477,10 @@ void loop() {
         esc3Value = throttle + pidPitchOutput - pidRollOutput - pidYawOutput;
         //Calculate the pulse for esc 4 (front-left - CW), PIN 12, esc D
         esc4Value = throttle - pidPitchOutput - pidRollOutput + pidYawOutput;
-      /*
+      /* - low voltage
       if(batteryVoltage <1200 && batteryVoltage >700){
         float comp = (1200-batteryVoltage)/(float(3500));
         esc1Value  = esc1Value * (comp);
-        // quite low voltage too - bring pulse down due to voltage drop
       }
       */
       if(esc1Value <= 1050){
@@ -532,6 +521,7 @@ void loop() {
     // is the max interval to send pulse to escs
     while(micros() - timerDrone < 20000);
     timerDrone = micros();
+    // reset microsecond timer
     if(notCalibrating and startingCode == 1){
       // when the escs are being calibrated, we don't want to execute this line of code.
       esc1.writeMicroseconds(esc1Value);
