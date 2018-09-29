@@ -14,21 +14,25 @@
 // first 'version' is based on a drone that can be controlled by a keyboard
 // a brief abstract of the following code:
 // I developed the code with the keyboard essentially following a
-
+#define Pi 3.1415926589793238
 #define MIN_PULSE_LENGTH 1000
 // Minimum pulse length in µs
 #define MAX_PULSE_LENGTH 2000
 // Maximum pulse length in µs
-
+// in order to have stabilize mode, need to keep track of the current angle of the drone
 
 // important values for keePINg track of things
 
 float throttleValue, pitchValue, yawValue, rollValue;
 float angleRollAcc, anglePitchAcc, anglePitch, angleRoll;
+bool anglesSet;
+
+
 // p, i, and d settings for the roll
 float PgainRoll = 1.2;
 float IgainRoll = 0.04;
-float DgainRoll = 10.0;
+float DgainRoll = 3.5;
+// the d gain value could increase - by too much - the sensitivity of the drone - need to account for this
 // maximum output of the controller
 int pidMaxRoll = 400;
 
@@ -44,12 +48,14 @@ int pidMaxPitch = pidMaxRoll;
 float PgainYaw = 4.0;
 float IgainYaw = 0.02;
 float DgainYaw = 0.0;
-int xAngle, yAngle, zAngle;
+int rollAngle, pitchAngle, yawAngle;
 
 int pidMaxYaw = pidMaxRoll;
 // boolean leveling = true;
 int accelerationX, accelerationY, accelerationZ, accelerationNet;
 int throttle;
+
+const float timerVal = (1/50);
 float batteryVoltage;
 float pidErrorTemp;
 float iMemRoll, iMemPitch, iMemYaw;
@@ -77,13 +83,13 @@ void test();
 void displayInstructions();
 void readData();
 void calibrateESC();
+void gyroCalibrations();
 //Motor 1 : front left - clockwise
 //Motor 2 : front right - counter-clockwise
 //Motor 3 : rear left - clockwise
 //Motor 4 : rear left - counter-clockwise
 // each one connected as an esc using the Servo library
 // here I will declare all of the 'global' variables that I will be able to use in the setup loop,
-// the loop loop, and any other supporting functions that I need
 void setup() {
     // put your setup code here, to run once:
     // the main code that is very similar to the arduino code
@@ -126,21 +132,10 @@ void setup() {
     rollCalibration = 0;
     pitchCalibration = 0;
     yawCalibration = 0;
+
     // setting the calbiration values - might package into a function here
     Serial.println("Calibrating all of the gyro values to zero. Please have the drone stationary.");
-    for(int i = 0; i< 2000; i++){
-      rollCalibration = rollCalibration + gyroArr[0];
-      pitchCalibration = pitchCalibration + gyroArr[1];
-      yawCalibration = yawCalibration + gyroArr[2];
-      readData();
-      delay(4);
-      // delay 4  milliseconds just to indicate to the user that is takes time
-      // adding up all of the totals so that we can get the average
-      // read the data and put the information into an array that is basically global to the whole program....
-    }
-    rollCalibration = rollCalibration/2000;
-    pitchCalibration = pitchCalibration/2000;
-    yawCalibration = yawCalibration/2000;
+    gyroCalibrations();
     Serial.println(rollCalibration);
     Serial.println(pitchCalibration);
     Serial.println(yawCalibration);
@@ -161,9 +156,12 @@ void setup() {
     displayInstructions();
     startingCode = 0;
     // since the drone has not been started or calibrated at all yet
-
     //batteryVoltage = (analogRead(0) + 65) * 1.2317;
-
+    rollAngle = 0;
+    pitchAngle = 0;
+    yawAngle = 0;
+    pitchAdjust = 0;
+    rollAdjust = 0;
     timerDrone = micros();
 
     // type of micros is unsigned long here
@@ -197,17 +195,9 @@ void displayInstructions()
 // direction.
 void findPID(){
   // the pid will be messed around when the rollInputGyro is fluctuating rapidly
-
-  // case that needs to be handled:
-
   // when the throttle is low, even small variations in pidErrorTemp cause fluctuation in the motors at this speed
   // and the differences become proportionally less than the desired throttle, at a higher throttle
   pidErrorTemp = rollInputGyro - rollSetpoint;
-
-
-  //Serial.println(rollInputGyro);
-  //Serial.println(rollSetpoint);
-
   // difference in the data reading and what was actually set by the user
   // calculating the big boy, the p, which accounts for the most work
   // roll error, input - what we actually want
@@ -220,8 +210,6 @@ void findPID(){
     iMemRoll = (pidMaxRoll * -1);
   }
 
-  // this is affected a lot
-
   pidRollOutput = PgainRoll * pidErrorTemp + iMemRoll + DgainRoll * (pidErrorTemp - pidLastRoll_D_Error);
   if(pidRollOutput > pidMaxRoll){
     pidRollOutput = pidMaxRoll;
@@ -232,8 +220,6 @@ void findPID(){
   pidLastRoll_D_Error = pidErrorTemp;
   // end of pitch. If we lived in a one-dimensional world, we would be done.
   // but alas, we are not
-
-
   pidErrorTemp = pitchInputGyro - pitchSetpoint;
   iMemPitch += IgainPitch * pidErrorTemp;
   // the integral pitch is the gain multiplied by the error so far and the gain, which is set manually and has to be tuned
@@ -246,7 +232,6 @@ void findPID(){
   // this is affected a lot
   pidPitchOutput = PgainPitch * pidErrorTemp + iMemPitch + DgainPitch * (pidErrorTemp - pidLastPitch_D_Error);
 
-
   if(pidPitchOutput > pidMaxPitch){
     pidPitchOutput = pidMaxPitch;
   }
@@ -254,7 +239,6 @@ void findPID(){
     pidPitchOutput = (pidMaxPitch * -1);
   }
   pidLastPitch_D_Error = pidErrorTemp;
-
 
   pidErrorTemp = yawInputGyro - yawSetpoint;
   iMemYaw += IgainYaw * pidErrorTemp;
@@ -264,20 +248,14 @@ void findPID(){
   else if(iMemYaw < (pidMaxYaw*-1)){
     iMemYaw = (pidMaxYaw*-1);
   }
-
   //this is is affected a lot
   pidYawOutput = PgainYaw * pidErrorTemp + iMemPitch * (pidErrorTemp - pidLastYaw_D_Error);
-
   if(pidYawOutput > pidMaxYaw){
     pidYawOutput = pidMaxYaw;
   }
   else if(pidYawOutput < (pidMaxYaw * -1)){
     pidYawOutput = (pidMaxYaw * -1);
   }
-
-
-
-
   pidLastYaw_D_Error = pidErrorTemp;
   // the most important outputs are :
   // pidYawOutput
@@ -302,32 +280,44 @@ void findPID(){
 
   // the refresh rate of the 30A BLD escs is 50 - 60 Hz
   //escs need pulse every 1/50 = 20ms
-  // higher refresh rate - 60  - 1/60 -> 16.6ms -> round to
-  // 17ms
+  // higher refresh rate - 60  - 1/60 -> 16.6ms -> 17 ms
+  // take higher value because of the uncertainty of the values
+void sendUnison(int uniValue){
+  esc1.writeMicroseconds(uniValue);
+  esc2.writeMicroseconds(uniValue);
+  esc3.writeMicroseconds(uniValue);
+  esc4.writeMicroseconds(uniValue);
+}
+
+float decrementAbsValue(float previous, float toChange){
+  if(previous <0){
+    toChange = toChange + 20;
+  }
+  else if(previous >0){
+    toChange = toChange - 20;
+  }
+  else{
+    toChange = 0;
+  }
+  return toChange;
+}
+
+
 void loop() {
   float prevThrottle = throttleValue;
   float prevPitch = pitchValue;
   float prevYaw = yawValue;
   float prevRoll = rollValue;
   bool notCalibrating = true;
-  // allow the user the see the options that they can do in order to control the drone
-  // serial will be available with the raspberry pi
+  // serial will be available with the raspberry pi, via bluetooth input
   if (Serial.available()) {
         data = Serial.read();
-
-
-
         //Serial.println(data, DEC);
-
-
-
-
-        // letters:
         // q, w, a, s, z, x, e, r
         // below are all the ascii codes for the keys that add functionality to the drone
         // roll - x
         // pitch - y
-        // yaw - z
+        // yaw - z, user can increment or decrement these values
         if(data == 113){
           throttleValue+=20.0;
           notCalibrating = true;
@@ -335,41 +325,35 @@ void loop() {
         else if(data == 119){
           throttleValue-=20.0;
           notCalibrating = true;
-
         }
         else if(data == 97){
-          pitchValue+=20.0;
+          pitchValue+=25.0;
           notCalibrating = true;
-
         }
         else if(data == 115){
-          pitchValue-=20.0;
+          pitchValue-=25.0;
           notCalibrating = true;
-
         }
         else if(data == 122){
-          yawValue+=20.0;
+          yawValue+=25.0;
           notCalibrating = true;
         }
         else if(data == 120){
-          yawValue-=20.0;
+          yawValue-=25.0;
           notCalibrating = true;
         }
         else if(data == 101){
-          rollValue+=20.0;
+          rollValue+=25.0;
           notCalibrating = true;
         }
         else if(data == 114){
-          rollValue-=20.0;
+          rollValue-=25.0;
           notCalibrating = true;
         }
         else if(data == 111){
           if(startingCode == 1){
             // if the drone is in the starting condition we can bring it to a stop, not the other way around
-            esc1.writeMicroseconds(MIN_PULSE_LENGTH);
-            esc2.writeMicroseconds(MIN_PULSE_LENGTH);
-            esc3.writeMicroseconds(MIN_PULSE_LENGTH);
-            esc4.writeMicroseconds(MIN_PULSE_LENGTH);
+            sendUnison(MIN_PULSE_LENGTH);
             Serial.println("Bringing down the values down to 0.");
             startingCode = 0;
           }
@@ -398,57 +382,51 @@ void loop() {
         }
         else if(data == 48){
           Serial.println("Sending minimum throttle");
-          esc1.writeMicroseconds(MIN_PULSE_LENGTH);
-          esc2.writeMicroseconds(MIN_PULSE_LENGTH);
-          esc3.writeMicroseconds(MIN_PULSE_LENGTH);
-          esc4.writeMicroseconds(MIN_PULSE_LENGTH);
+          sendUnison(MIN_PULSE_LENGTH);
           notCalibrating = false;
         }
         else if(data == 49){
           Serial.println("Sending maximum throttle");
-          esc1.writeMicroseconds(MAX_PULSE_LENGTH);
-          esc2.writeMicroseconds(MAX_PULSE_LENGTH);
-          esc3.writeMicroseconds(MAX_PULSE_LENGTH);
-          esc4.writeMicroseconds(MAX_PULSE_LENGTH);
+          sendUnison(MAX_PULSE_LENGTH);
           notCalibrating = false;
         }
         else if(data == 50){
           Serial.print("Preparing to run test:");
           delay(3000);
           test();
+          anglePitch = anglePitchAcc;
+          angleRoll = angleRollAcc;
           // conduct the testing and starting up the drone
+          anglesSet = true;
           notCalibrating = false;
           startingCode = 1;
         }
         // all other cases are just ignored.
-        // change up the code here without switch statemen
     }
     if(notCalibrating and startingCode == 1){
       // the drone must be at the startingCode of 1 to be able to be written a pulse too
       if(prevThrottle == throttleValue){
         throttleValue = prevThrottle;
-          // throttle was not changed
       }
       if(prevPitch == pitchValue){
-        // pitch was not changed
-        pitchValue = 0;
+        // pitch was not changed, bring it down to the absolute value
+        pitchValue  = decrementAbsValue(prevPitch, pitchValue);
       }
       if(prevYaw == yawValue){
-        yawValue = 0;
-        // yaw was not changed
+        yawValue = decrementAbsValue(prevYaw, yawValue);
+        // yaw was not changed, bring down to the absolute value
       }
       if(prevRoll == rollValue){
-        rollValue = 0;
-        // roll was not changed, will stabilize back to 0 then
+        rollValue = decrementAbsValue(prevRoll, rollValue);
+        // roll was not changed, will stabilize back to 0, but not immediately
       }
-      // need to get to degrees per second...
       // below code ensures that the throttle, pitch, roll, and yaw do not go out of the bounds of the
       // max values - and that the drone does not tip over.
       if(throttleValue >= 1950){
         throttleValue = 1950;
       }
-      if(throttleValue < (1000)){
-        throttleValue = 1000;
+      if(throttleValue <= (1100)){
+        throttleValue = 1100;
       }
       if(pitchValue > 500){
         pitchValue = 500;
@@ -456,13 +434,13 @@ void loop() {
       if(pitchValue <= -500){
         pitchValue = -500;
       }
-      if(rollValue > 500){
+      if(rollValue >= 500){
         rollValue = 500;
       }
       if(rollValue <= -500){
         rollValue = -500;
       }
-      if(yawValue > 5400){
+      if(yawValue >= 500){
         yawValue = 500;
       }
       if(yawValue <= (-500)){
@@ -474,29 +452,8 @@ void loop() {
       yawSetpoint = yawValue;
       rollSetpoint = rollValue;
     }
-    // pid input should be in degrees per second,   reading in the data to get the right inputs
-    readData();
+    // pid input should be in degrees per second, gyro goes to +- 245 dp
     /*
-    anglePitch = anglePitch + (gyroArr[0]* 0.0000611);
-    angleRoll = angleRollAcc + (gyroArr[1]*0.0000611);
-    anglePitch -= angleRoll * sin(gyroArr[2] * 0.000001066);
-    angleRoll += anglePitch * sin(gyroArr[2] * 0.000001066);
-    if(abs(accelerationArr[1])< accelerationArr[3]){
-      anglePitchAcc = asin((float)accelerationArr[1]/accelerationArr[3])*(57.2960);
-  }
-    if(abs(accelerationArr[0])< accelerationArr[3]){
-      angleRollAcc = asin((float)accelerationArr[0]/accelerationArr[3])* (-57.2960);
-    }
-    anglePitch = anglePitch * 0.9997 + anglePitchAcc * 0.0003;            //Correct the drift of the gyro pitch angle with the accelerometer pitch angle.
-    angleRoll = angleRoll * 0.9997 + angleRollAcc * 0.0003;
-    //Correct the drift of the gyro roll angle with the accelerometer roll angle.
-    pitchAdjust = anglePitch * 15;
-    rollAdjust = angleRoll * 15;
-    // will have to modify values of these later
-    if(!autoLeveling){
-      pitchAdjust = 0;
-      rollAdjust = 0;
-    }
     pitchSetpoint = pitchSetpoint - pitchAdjust;
     rollSetpoint = rollSetpoint - rollAdjust;
     */
@@ -504,12 +461,12 @@ void loop() {
     rollInputGyro = gyroArr[0] - rollCalibration;
     pitchInputGyro = gyroArr[1] - pitchCalibration;
     yawInputGyro = gyroArr[2] - yawCalibration;
-
+    pitchSetpoint -= pitchAdjust;
+    rollSetpoint -= rollAdjust;
     pitchSetpoint = pitchSetpoint/3;
     rollSetpoint = rollSetpoint/3;
     yawSetpoint = yawSetpoint/3;
     findPID();
-
     //pidPitchOutput = 0;
     //pidRollOutput = 0;
     //pidYawOutput = 0;
@@ -530,9 +487,6 @@ void loop() {
         esc3Value = throttle + pidPitchOutput - pidRollOutput - pidYawOutput;
         //Calculate the pulse for esc 4 (front-left - CW), PIN 12, esc D
         esc4Value = throttle - pidPitchOutput - pidRollOutput + pidYawOutput;
-
-
-
       /* - low voltage
       if(batteryVoltage <1200 && batteryVoltage >700){
         float comp = (1200-batteryVoltage)/(float(3500));
@@ -565,14 +519,13 @@ void loop() {
       }
     }
     else if (notCalibrating==true && startingCode==0){
-      // case where startingCode is 0 - the
+      // case where startingCode is 0 - the drone isn't in starting mode yet
       esc1Value = 1000;
       esc2Value = 1000;
       esc3Value = 1000;
       esc4Value = 1000;
     }
     // writing the necessary pulse to each individual ESC based on the pid controller algorithm; each value is different
-    // due to taking into account direction
     // the refresh rate of these escs is 50-60 Hz - take the lower end of it and have a loop that runs every 20,000us because that
     // is the max interval to send pulse to escs
     if(notCalibrating and startingCode == 1){
@@ -583,88 +536,95 @@ void loop() {
       esc4.writeMicroseconds(esc4Value);
     }
     //delay(200); // just a simple delay, will need microsecond timer later
-
-    while(micros() - timerDrone < 40000);
+    while(micros() - timerDrone <= 20000);
     timerDrone = micros();
+    readData();
+
+
+
+    rollAngle += (gyroArr[0] * timerVal);
+    pitchAngle += (gyroArr[1] * timerVal);
+    yawAngle += (gyroArr[2] * timerVal);
+
+    // a check to see if the yaw has transferred to the roll and/or pitch angle
+    rollAngle -= pitchAngle * sin(gyroArr[2] * timerVal * (Pi / 180));
+    pitchAngle -= rollAngle * sin(gyroArr[2] * timerVal * (Pi / 180));
+
+    // calculating the real pitch and roll angle
+
+    float accelerationNetVector = accArr[3];
+    float anglePitchAcceleration = 0;
+    float angleRollAcceleration = 0;
+    if(abs(accArr[0]) < accelerationNetVector){
+      anglePitchAcceleration = asin(float(accArr[1])/accelerationNetVector) * 57.296;
+    }
+
+    if(abs(accArr[1]) < accelerationNetVector){
+      angleRollAcceleration = asin(float(accArr[0])/accelerationNetVector) * -57.296;
+    }
+
+    pitchAngle = (pitchAngle * 0.9996) + (anglePitchAcceleration * 0.0004);
+    rollAngle = (rollAngle * 0.9996) + (angleRollAcceleration * 0.0004);
+    // will subtract from the pitch and roll setpoint
+    pitchAdjust = pitchAngle * 15;
+    rollAdjust = rollAdjust * 15;
+    if(!autoLeveling){
+      pitchAdjust = 0;
+      rollAdjust = 0;
+    }
+
+
+    // pitch and roll correction
+    //0.000001066 = 0.0000611 * (3.142(PI) / 180degr) The Arduino sin function is in radian
+
+    // find integral of dps for angular position of drone
+
+    // reset microsecond timer
   /*
-  if(!autoLeveling){
-    pitchAdjust = 0;
-    rollAdjust = 0;
-  }
-  pitchSetpoint = pitchSetpoint - pitchAdjust;
-  rollSetpoint = rollSetpoint - rollAdjust;
-  // accounting for the roll and pitch adjustments based on angles
-  // we need to look more into this and see if any dividing needs to be done as per the PID controller
-
-  if(abs(acc_y) < acc_total_vector){                                        //Prevent the asin function to produce a NaN
-    angle_pitch_acc = asin((float)acc_y/acc_total_vector)* 57.296;          //Calculate the pitch angle.
-  }
-  if(abs(acc_x) < acc_total_vector){                                        //Prevent the asin function to produce a NaN
-    angle_roll_acc = asin((float)acc_x/acc_total_vector)* -57.296;          //Calculate the roll angle.
-  }
-  // already have calculated the net acceleration vector from the answer here
-  angle_pitch += gyro_pitch * 0.0000611;                                    //Calculate the traveled pitch angle and add this to the angle_pitch variable.
-  angle_roll += gyro_roll * 0.0000611;                                      //Calculate the traveled roll angle and add this to the angle_roll variable.
-
-  //0.000001066 = 0.0000611 * (3.142(PI) / 180degr) The Arduino sin function is in radians
-  angle_pitch -= angle_roll * sin(gyro_yaw * 0.000001066);                  //If the IMU has yawed transfer the roll angle to the pitch angel.
-  angle_roll += angle_pitch * sin(gyro_yaw * 0.000001066);                  //If the IMU has yawed transfer the pitch angle to the roll angel.
-
-  acc_total_vector = sqrt((acc_x*acc_x)+(acc_y*acc_y)+(acc_z*acc_z));       //Calculate the total accelerometer vector.
-
-  if(abs(acc_y) < acc_total_vector){                                        //Prevent the asin function to produce a NaN
-    angle_pitch_acc = asin((float)acc_y/acc_total_vector)* 57.296;          //Calculate the pitch angle.
-  }
-  if(abs(acc_x) < acc_total_vector){                                        //Prevent the asin function to produce a NaN
-    angle_roll_acc = asin((float)acc_x/acc_total_vector)* -57.296;          //Calculate the roll angle.
-  }
-  //Place the MPU-6050 spirit level and note the values in the following two lines for calibration.
-  angle_pitch_acc -= 0.0;                                                   //Accelerometer calibration value for pitch.
-  angle_roll_acc -= 0.0;                                                    //Accelerometer calibration value for roll.
-
-  angle_pitch = angle_pitch * 0.9996 + angle_pitch_acc * 0.0004;            //Correct the drift of the gyro pitch angle with the accelerometer pitch angle.
-  angle_roll = angle_roll * 0.9996 + angle_roll_acc * 0.0004;               //Correct the drift of the gyro roll angle with the accelerometer roll angle.
-
-  pitch_level_adjust = angle_pitch * 15;                                    //Calculate the pitch angle correction
-  roll_level_adjust = angle_roll * 15;                                      //Calculate the roll angle correction
-
-  if(!auto_level){                                                          //If the quadcopter is not in auto-level mode
-    pitch_level_adjust = 0;                                                 //Set the pitch angle correction to zero.
-    roll_level_adjust = 0;                                                  //Set the roll angle correcion to zero.
-  }
-
-  angle_pitch = angle_pitch_acc;                                          //Set the gyro pitch angle equal to the accelerometer pitch angle when the quadcopter is started.
-  angle_roll = angle_roll_acc;                                            //Set the gyro roll angle equal to the accelerometer roll angle when the quadcopter is started.
-  gyro_angles_set = true;
-
-  batteryVoltage = batteryVoltage * 0.92 + (analogRead(0) + 65) * 0.09853;
-
-  // accounting for the calibration that occurred when the drone was stationary
-
-  // all of the inputs based on reading the data each time
-  // account for throttle of the drone...
+    batteryVoltage = batteryVoltage * 0.92 + (analogRead(0) + 65) * 0.09853;
     if(batteryVoltage <1200 && batteryVoltage >700){
       float comp = (1200-batteryVoltage)/(float(3500));
       esc1Value  = esc1Value * (comp);
     }
 */
+
 }
+
+
+
+void gyroCalibrations(){
+  rollCalibration = 0;
+  pitchCalibration = 0;
+  yawCalibration = 0;
+  for(int i = 0; i< 2000; i++){
+    rollCalibration = rollCalibration + gyroArr[0];
+    pitchCalibration = pitchCalibration + gyroArr[1];
+    yawCalibration = yawCalibration + gyroArr[2];
+    readData();
+    delay(1);
+    // delay 1  millisecond just to indicate to the user that is takes time
+    // adding up all of the totals so that we can get the average
+    // read the data and put the information into an array that is basically global to the whole program....
+  }
+  rollCalibration = (rollCalibration/2000);
+  pitchCalibration = (pitchCalibration/2000);
+  yawCalibration = (yawCalibration/2000);
+  // finds the calibration when the gyro is completely still
+}
+
+
+
+
+
 void calibrateESC(){
-  esc1.writeMicroseconds(MAX_PULSE_LENGTH);
-  esc2.writeMicroseconds(MAX_PULSE_LENGTH);
-  esc3.writeMicroseconds(MAX_PULSE_LENGTH);
-  esc4.writeMicroseconds(MAX_PULSE_LENGTH);
+  sendUnison(MAX_PULSE_LENGTH);
   Serial.print("Preparing to send min pulse for arming sequence... Plug in the battery now.");
   // later ... have something that automatically handles this
   delay(4000);
-  esc1.writeMicroseconds(MIN_PULSE_LENGTH);
-  esc2.writeMicroseconds(MIN_PULSE_LENGTH);
-  esc3.writeMicroseconds(MIN_PULSE_LENGTH);
-  esc4.writeMicroseconds(MIN_PULSE_LENGTH);
+  sendUnison(MIN_PULSE_LENGTH);
   delay(4000);
   Serial.print("Hopefully all four escs should be calibrated... and made the successful startup sound.");
   startingCode = 1;
-  // 1 second delay should enable the esc to know where the max and min pulse are each at....
 }
 // a simple testing function to go from the minimum to maximum pulse length
 void test()
@@ -674,47 +634,12 @@ void test()
     for (int i = MIN_PULSE_LENGTH; i <= 1400; i += 10) {
         Serial.print(i);
         Serial.print('\n');
-        esc1.writeMicroseconds(i);
-        esc2.writeMicroseconds(i);
-        esc3.writeMicroseconds(i);
-        esc4.writeMicroseconds(i);
-        if (i==1350){
-          rollCalibration = 0;
-          pitchCalibration = 0;
-          yawCalibration = 0;
-          Serial.println("Calibrating all of the gyro values to zero. Please have the drone stationary.");
-          esc1.writeMicroseconds(1150);
-          esc2.writeMicroseconds(1150);
-          esc3.writeMicroseconds(1150);
-          esc4.writeMicroseconds(1150);
-          for(int i = 0; i< 2000; i++){
-            rollCalibration = rollCalibration + gyroArr[0];
-            pitchCalibration = pitchCalibration + gyroArr[1];
-            yawCalibration = yawCalibration + gyroArr[2];
-            readData();
-            delay(1);
-            // delay 4  milliseconds just to indicate to the user that is takes time
-            // adding up all of the totals so that we can get the average
-            // read the data and put the information into an array that is basically global to the whole program....
-          }
-          rollCalibration = (rollCalibration/2000);
-          pitchCalibration = (pitchCalibration/2000);
-          yawCalibration = (yawCalibration/2000);
-          rollCalibration = 0;
-          pitchCalibration = 1;
-          yawCalibration = 2;
-          Serial.println(rollCalibration);
-          Serial.println(pitchCalibration);
-          Serial.println(yawCalibration);
-        }
+        sendUnison(i);
         delay(200);
     }
     Serial.println("STOP");
     // going back to writing minimum pulse length
-    esc1.writeMicroseconds(MIN_PULSE_LENGTH);
-    esc2.writeMicroseconds(MIN_PULSE_LENGTH);
-    esc3.writeMicroseconds(MIN_PULSE_LENGTH);
-    esc4.writeMicroseconds(MIN_PULSE_LENGTH);
+    sendUnison(MIN_PULSE_LENGTH);
 }
 
 void readData(){
@@ -734,15 +659,13 @@ void readData(){
   accArr[1] = a.acceleration.y;
   accArr[2] = a.acceleration.z;
   accArr[3] = accelerationResult;
-  //Serial.print("The 3-d vector for acceleration is: "); Serial.print(accelerationResult); Serial.println("m/s^2 ");
-  // printing out all of the values
   //Serial.print("Magnetic field X: "); Serial.print(m.magnetic.x);   Serial.print(" gauss");
   //Serial.print("\tY: "); Serial.print(m.magnetic.y);     Serial.print(" gauss");
   //Serial.print("\tZ: "); Serial.print(m.magnetic.z);     Serial.println(" gauss");
   // degrees per second
   //Serial.print("Roll: "); Serial.print(g.gyro.x);   Serial.print(" dps");
   //Serial.print("Pitch: "); Serial.print(g.gyro.y);      Serial.print(" dps");
-  //Serial.print("Yaw: "); Serial.print(g.gyro.z);      Serial.println(" dps");
+  //Serial.print("Yaw: "); Serial.print(g.gyro.z);      S
   float gyroX = g.gyro.x * g.gyro.x;
   float gyroY = g.gyro.y * g.gyro.y;
   float gyroZ = g.gyro.z * g.gyro.z;
@@ -753,4 +676,18 @@ void readData(){
   gyroArr[1] = g.gyro.y;
   gyroArr[2] = g.gyro.z;
   gyroArr[3] = gyroResult;
+  // filter for vibrations of the gyro s.t x,y,z <=8 deg/s
+  if(abs(gyroArr[0])<=8){
+    gyroArr[0] = 0;
+    // possible
+
+  }
+  if(abs(gyroArr[1])<=8){
+    gyroArr[1] = 0;
+  }
+  if(abs(gyroArr[2])<=8){
+    gyroArr[2] = 0;
+  }
 }
+
+// kalman filter to filter out noise - do we need it for now.
