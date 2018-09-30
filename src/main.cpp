@@ -114,6 +114,7 @@ void setup() {
     //lsm.setupMag(lsm.LSM9DS1_MAGGAIN_12GAUSS);
     //lsm.setupMag(lsm.LSM9DS1_MAGGAIN_16GAUSS);
     // 3.) Setup the gyroscope
+    // max dps is 245
     lsm.setupGyro(lsm.LSM9DS1_GYROSCALE_245DPS);
     //lsm.setupGyro(lsm.LSM9DS1_GYROSCALE_500DPS);
     //lsm.setupGyro(lsm.LSM9DS1_GYROSCALE_2000DPS);
@@ -198,7 +199,13 @@ void findPID(){
   // when the throttle is low, even small variations in pidErrorTemp cause fluctuation in the motors at this speed
   // and the differences become proportionally less than the desired throttle, at a higher throttle
   pidErrorTemp = rollInputGyro - rollSetpoint;
-  // difference in the data reading and what was actually set by the user
+  // difference in the data reading and roll setpoint, the dps that the drone needs to go
+
+
+
+  // difference between the current dps and dps that the drone needs to get to
+
+  
   // calculating the big boy, the p, which accounts for the most work
   // roll error, input - what we actually want
   iMemRoll += IgainRoll * pidErrorTemp;
@@ -459,13 +466,28 @@ void loop() {
     */
     // input is subtracted from what the roll is expected at the stationary surface; that is, when all axes are at 0 ....
     rollInputGyro = gyroArr[0] - rollCalibration;
+    // actual data read in from the roll
     pitchInputGyro = gyroArr[1] - pitchCalibration;
+    // actual data read in from the pitch
     yawInputGyro = gyroArr[2] - yawCalibration;
+    // actual data read in from the yaw
+
+    // rollSetpoint is (500-)
     pitchSetpoint -= pitchAdjust;
+    // pitchSetpoint is desired user value - adjusted pitch
+    // variables suffixed with 'Adjust' give input in degrees per second,
+    // and if pitchSetpoint is a higher dps then that means the drone needs to turn faster.
     rollSetpoint -= rollAdjust;
+    // same with roll
     pitchSetpoint = pitchSetpoint/3;
     rollSetpoint = rollSetpoint/3;
     yawSetpoint = yawSetpoint/3;
+    /// these three values were scaled down to set bounds of the drone
+    // will never go aboce (500/3)
+    // ^
+    // |
+    // |
+    // most important lines of code above, we need the right inputs in the pid - in degrees per second
     findPID();
     //pidPitchOutput = 0;
     //pidRollOutput = 0;
@@ -545,7 +567,7 @@ void loop() {
     rollAngle += (gyroArr[0] * timerVal);
     pitchAngle += (gyroArr[1] * timerVal);
     yawAngle += (gyroArr[2] * timerVal);
-
+    Serial.print(rollAngle);
     // a check to see if the yaw has transferred to the roll and/or pitch angle
     rollAngle -= pitchAngle * sin(gyroArr[2] * timerVal * (Pi / 180));
     pitchAngle -= rollAngle * sin(gyroArr[2] * timerVal * (Pi / 180));
@@ -563,11 +585,13 @@ void loop() {
       angleRollAcceleration = asin(float(accArr[0])/accelerationNetVector) * -57.296;
     }
 
-    pitchAngle = (pitchAngle * 0.9996) + (anglePitchAcceleration * 0.0004);
-    rollAngle = (rollAngle * 0.9996) + (angleRollAcceleration * 0.0004);
+    pitchAngle = (pitchAngle * 0.996) + (anglePitchAcceleration * 0.004);
+    rollAngle = (rollAngle * 0.996) + (angleRollAcceleration * 0.004);
+    // a way to prevent the extra noise from the vibrations of the escs
     // will subtract from the pitch and roll setpoint
     pitchAdjust = pitchAngle * 15;
     rollAdjust = rollAdjust * 15;
+    // how much we need to adjust by
     if(!autoLeveling){
       pitchAdjust = 0;
       rollAdjust = 0;
@@ -677,6 +701,8 @@ void readData(){
   gyroArr[2] = g.gyro.z;
   gyroArr[3] = gyroResult;
   // filter for vibrations of the gyro s.t x,y,z <=8 deg/s
+
+  /*
   if(abs(gyroArr[0])<=8){
     gyroArr[0] = 0;
     // possible
@@ -687,7 +713,9 @@ void readData(){
   }
   if(abs(gyroArr[2])<=8){
     gyroArr[2] = 0;
-  }
+  }qq
+
+  */
 }
 
 // kalman filter to filter out noise - do we need it for now.
