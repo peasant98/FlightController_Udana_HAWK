@@ -55,7 +55,7 @@ int pidMaxYaw = pidMaxRoll;
 int accelerationX, accelerationY, accelerationZ, accelerationNet;
 int throttle;
 
-const float timerVal = (1/50);
+const float timerVal = (0.02);
 float batteryVoltage;
 float pidErrorTemp;
 float iMemRoll, iMemPitch, iMemYaw;
@@ -102,7 +102,10 @@ void setup() {
     Serial.println("Ooops, no LSM9DS1 detected ... Check your wiring!");
   }
   else{
-    Serial.println("Success!");
+
+
+    //Serial.println("Success!");
+
     // setting up acceleration, magnetism and gyro
     lsm.setupAccel(lsm.LSM9DS1_ACCELRANGE_2G);
     //lsm.setupAccel(lsm.LSM9DS1_ACCELRANGE_4G);
@@ -135,7 +138,11 @@ void setup() {
     yawCalibration = 0;
 
     // setting the calbiration values - might package into a function here
-    Serial.println("Calibrating all of the gyro values to zero. Please have the drone stationary.");
+
+
+    //Serial.println("Calibrating all of the gyro values to zero. Please have the drone stationary.");
+
+
     gyroCalibrations();
     Serial.println(rollCalibration);
     Serial.println(pitchCalibration);
@@ -154,7 +161,14 @@ void setup() {
     // will allow the drone to be properly calibrated.
     // after this and the user has plugged in the drone we will be ready to begin
     // startingCode reset to account for this
-    displayInstructions();
+
+    // comment out displayInstructions() function when testing keyboard input on Rasbperry Pi.
+
+
+    //displayInstructions();
+
+
+
     startingCode = 0;
     // since the drone has not been started or calibrated at all yet
     //batteryVoltage = (analogRead(0) + 65) * 1.2317;
@@ -205,7 +219,7 @@ void findPID(){
 
   // difference between the current dps and dps that the drone needs to get to
 
-  
+
   // calculating the big boy, the p, which accounts for the most work
   // roll error, input - what we actually want
   iMemRoll += IgainRoll * pidErrorTemp;
@@ -361,11 +375,17 @@ void loop() {
           if(startingCode == 1){
             // if the drone is in the starting condition we can bring it to a stop, not the other way around
             sendUnison(MIN_PULSE_LENGTH);
-            Serial.println("Bringing down the values down to 0.");
+
+
+            //Serial.println("Bringing down the values down to 0.");
+
+
             startingCode = 0;
           }
           else{
-            Serial.println("You cannot do this based on the starting code.");
+
+
+            //Serial.println("You cannot do this based on the starting code.");
           }
         }
         else if(data == 112){
@@ -379,26 +399,32 @@ void loop() {
             pidLastPitch_D_Error = 0;
             pidLastYaw_D_Error = 0;
             // resetting all of the pid values when everything is restarted.
-            Serial.println("Restarting the HAWK from being STATIONARY...");
+
+            //Serial.println("Restarting the HAWK from being STATIONARY...");
+
+
             // the HAWK has already been calibrated at this point in the program though
             startingCode = 1;
           }
           else{
-            Serial.println("You cannot do this based on the starting code.");
+            //Serial.println("You cannot do this based on the starting code.");
           }
         }
         else if(data == 48){
-          Serial.println("Sending minimum throttle");
+
+          //Serial.println("Sending minimum throttle");
           sendUnison(MIN_PULSE_LENGTH);
           notCalibrating = false;
         }
         else if(data == 49){
-          Serial.println("Sending maximum throttle");
+
+          //Serial.println("Sending maximum throttle");
           sendUnison(MAX_PULSE_LENGTH);
           notCalibrating = false;
         }
         else if(data == 50){
-          Serial.print("Preparing to run test:");
+
+          //Serial.print("Preparing to run test:");
           delay(3000);
           test();
           anglePitch = anglePitchAcc;
@@ -567,11 +593,12 @@ void loop() {
     rollAngle += (gyroArr[0] * timerVal);
     pitchAngle += (gyroArr[1] * timerVal);
     yawAngle += (gyroArr[2] * timerVal);
-    Serial.print(rollAngle);
+    // pi arctan(1)/4;
+
     // a check to see if the yaw has transferred to the roll and/or pitch angle
     rollAngle -= pitchAngle * sin(gyroArr[2] * timerVal * (Pi / 180));
     pitchAngle -= rollAngle * sin(gyroArr[2] * timerVal * (Pi / 180));
-
+    //Serial.print(rollAngle);
     // calculating the real pitch and roll angle
 
     float accelerationNetVector = accArr[3];
@@ -642,12 +669,17 @@ void gyroCalibrations(){
 
 void calibrateESC(){
   sendUnison(MAX_PULSE_LENGTH);
-  Serial.print("Preparing to send min pulse for arming sequence... Plug in the battery now.");
+
+  //Serial.print("Preparing to send min pulse for arming sequence... Plug in the battery now.");
+
   // later ... have something that automatically handles this
   delay(4000);
   sendUnison(MIN_PULSE_LENGTH);
   delay(4000);
-  Serial.print("Hopefully all four escs should be calibrated... and made the successful startup sound.");
+
+  //Serial.print("Hopefully all four escs should be calibrated... and made the successful startup sound.");
+
+
   startingCode = 1;
 }
 // a simple testing function to go from the minimum to maximum pulse length
@@ -656,12 +688,14 @@ void test()
   // occurs after the drone's escs are calibrated.
   // pulse of 1000 to 1400,intervals of 10
     for (int i = MIN_PULSE_LENGTH; i <= 1400; i += 10) {
-        Serial.print(i);
-        Serial.print('\n');
+        //Serial.print(i);
+        //Serial.print('\n');
         sendUnison(i);
         delay(200);
     }
-    Serial.println("STOP");
+    //Serial.println("STOP");
+
+
     // going back to writing minimum pulse length
     sendUnison(MIN_PULSE_LENGTH);
 }
@@ -700,8 +734,7 @@ void readData(){
   gyroArr[1] = g.gyro.y;
   gyroArr[2] = g.gyro.z;
   gyroArr[3] = gyroResult;
-  // filter for vibrations of the gyro s.t x,y,z <=8 deg/s
-
+// filter
   /*
   if(abs(gyroArr[0])<=8){
     gyroArr[0] = 0;
@@ -718,4 +751,4 @@ void readData(){
   */
 }
 
-// kalman filter to filter out noise - do we need it for now.
+// kalman filter to filter out noise - do we need it for now?
