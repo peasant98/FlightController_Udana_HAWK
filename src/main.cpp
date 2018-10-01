@@ -119,7 +119,7 @@ void setup() {
     // 3.) Setup the gyroscope
     // max dps is 245
     lsm.setupGyro(lsm.LSM9DS1_GYROSCALE_245DPS);
-    //lsm.setupGyro(lsm.LSM9DS1_GYROSCALE_500DPS);
+    //lsm.setupGyro(lsm.LS  M9DS1_GYROSCALE_500DPS);
     //lsm.setupGyro(lsm.LSM9DS1_GYROSCALE_2000DPS);
     //PINMode(LED3, OUTPUT);
     //pinMode(LED2, OUTPUT);
@@ -167,8 +167,6 @@ void setup() {
 
     //displayInstructions();
 
-
-
     startingCode = 0;
     // since the drone has not been started or calibrated at all yet
     //batteryVoltage = (analogRead(0) + 65) * 1.2317;
@@ -202,7 +200,8 @@ void displayInstructions()
     Serial.println("P - Go, get the drone to begin again");
     Serial.println("0 : Send min throttle");
     Serial.println("1 : Send max throttle");
-    Serial.println("2 : Run test function");
+    // done with the test
+    //Serial.println("2 : Run test function");
 }
 // pid algorithm is here, once we have the desired user inputs we can calculate what pulse we must send to each of the motors
 // the input for the function will be in degrees per second
@@ -376,15 +375,10 @@ void loop() {
             // if the drone is in the starting condition we can bring it to a stop, not the other way around
             sendUnison(MIN_PULSE_LENGTH);
 
-
             //Serial.println("Bringing down the values down to 0.");
-
-
             startingCode = 0;
           }
           else{
-
-
             //Serial.println("You cannot do this based on the starting code.");
           }
         }
@@ -399,10 +393,7 @@ void loop() {
             pidLastPitch_D_Error = 0;
             pidLastYaw_D_Error = 0;
             // resetting all of the pid values when everything is restarted.
-
             //Serial.println("Restarting the HAWK from being STATIONARY...");
-
-
             // the HAWK has already been calibrated at this point in the program though
             startingCode = 1;
           }
@@ -415,24 +406,17 @@ void loop() {
           //Serial.println("Sending minimum throttle");
           sendUnison(MIN_PULSE_LENGTH);
           notCalibrating = false;
+          anglePitch = anglePitchAcc;
+          angleRoll = angleRollAcc;
+          // conduct the testing and starting up the drone
+          anglesSet = true;
+          startingCode = 1;
         }
         else if(data == 49){
 
           //Serial.println("Sending maximum throttle");
           sendUnison(MAX_PULSE_LENGTH);
           notCalibrating = false;
-        }
-        else if(data == 50){
-
-          //Serial.print("Preparing to run test:");
-          delay(3000);
-          test();
-          anglePitch = anglePitchAcc;
-          angleRoll = angleRollAcc;
-          // conduct the testing and starting up the drone
-          anglesSet = true;
-          notCalibrating = false;
-          startingCode = 1;
         }
         // all other cases are just ignored.
     }
@@ -509,10 +493,7 @@ void loop() {
     rollSetpoint = rollSetpoint/3;
     yawSetpoint = yawSetpoint/3;
     /// these three values were scaled down to set bounds of the drone
-    // will never go aboce (500/3)
-    // ^
-    // |
-    // |
+    // will never go above (500/3)
     // most important lines of code above, we need the right inputs in the pid - in degrees per second
     findPID();
     //pidPitchOutput = 0;
@@ -638,10 +619,7 @@ void loop() {
       esc1Value  = esc1Value * (comp);
     }
 */
-
 }
-
-
 
 void gyroCalibrations(){
   rollCalibration = 0;
@@ -664,9 +642,6 @@ void gyroCalibrations(){
 }
 
 
-
-
-
 void calibrateESC(){
   sendUnison(MAX_PULSE_LENGTH);
 
@@ -676,10 +651,7 @@ void calibrateESC(){
   delay(4000);
   sendUnison(MIN_PULSE_LENGTH);
   delay(4000);
-
   //Serial.print("Hopefully all four escs should be calibrated... and made the successful startup sound.");
-
-
   startingCode = 1;
 }
 // a simple testing function to go from the minimum to maximum pulse length
@@ -694,8 +666,6 @@ void test()
         delay(200);
     }
     //Serial.println("STOP");
-
-
     // going back to writing minimum pulse length
     sendUnison(MIN_PULSE_LENGTH);
 }
@@ -746,8 +716,7 @@ void readData(){
   }
   if(abs(gyroArr[2])<=8){
     gyroArr[2] = 0;
-  }qq
-
+  }
   */
 }
 
