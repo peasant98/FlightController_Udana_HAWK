@@ -26,7 +26,7 @@
 float throttleValue, pitchValue, yawValue, rollValue;
 float angleRollAcc, anglePitchAcc, anglePitch, angleRoll;
 bool anglesSet;
-
+bool readyToGo;
 
 // p, i, and d settings for the roll
 float PgainRoll = 1.2;
@@ -144,9 +144,15 @@ void setup() {
 
 
     gyroCalibrations();
+
+    /*
     Serial.println(rollCalibration);
     Serial.println(pitchCalibration);
     Serial.println(yawCalibration);
+
+    */
+
+
     // subtract that everything once we read in dps input for the gyro
     // subtract this from the current reading for the best relative value
     // will account for this as the drone is moving
@@ -157,7 +163,7 @@ void setup() {
     esc4.attach(12, MIN_PULSE_LENGTH, MAX_PULSE_LENGTH);
     // now for calbrating and arming the escs (one still doesn't work..)
     //calibrateESC();
-    // requires the user to plug in the battery1
+    // requires the user to plug in the battery10
     // will allow the drone to be properly calibrated.
     // after this and the user has plugged in the drone we will be ready to begin
     // startingCode reset to account for this
@@ -175,6 +181,7 @@ void setup() {
     yawAngle = 0;
     pitchAdjust = 0;
     rollAdjust = 0;
+    readyToGo = false;
     timerDrone = micros();
 
     // type of micros is unsigned long here
@@ -214,11 +221,7 @@ void findPID(){
   pidErrorTemp = rollInputGyro - rollSetpoint;
   // difference in the data reading and roll setpoint, the dps that the drone needs to go
 
-
-
   // difference between the current dps and dps that the drone needs to get to
-
-
   // calculating the big boy, the p, which accounts for the most work
   // roll error, input - what we actually want
   iMemRoll += IgainRoll * pidErrorTemp;
@@ -329,21 +332,22 @@ void loop() {
   float prevYaw = yawValue;
   float prevRoll = rollValue;
   bool notCalibrating = true;
+
   // serial will be available with the raspberry pi, via bluetooth input
   if (Serial.available()) {
         data = Serial.read();
-        //Serial.println(data, DEC);
+        Serial.println(data, DEC);
         // q, w, a, s, z, x, e, r
         // below are all the ascii codes for the keys that add functionality to the drone
         // roll - x
         // pitch - y
         // yaw - z, user can increment or decrement these values
         if(data == 113){
-          throttleValue+=20.0;
+          throttleValue+=5.0;
           notCalibrating = true;
         }
         else if(data == 119){
-          throttleValue-=20.0;
+          throttleValue-=5.0;
           notCalibrating = true;
         }
         else if(data == 97){
@@ -409,8 +413,13 @@ void loop() {
           anglePitch = anglePitchAcc;
           angleRoll = angleRollAcc;
           // conduct the testing and starting up the drone
+          readyToGo = true;
           anglesSet = true;
+          delay(5000);
           startingCode = 1;
+
+
+          //startingCode = 1;
         }
         else if(data == 49){
 
@@ -442,8 +451,8 @@ void loop() {
       if(throttleValue >= 1950){
         throttleValue = 1950;
       }
-      if(throttleValue <= (1100)){
-        throttleValue = 1100;
+      if(throttleValue <= (1000)){
+        throttleValue = 1000;
       }
       if(pitchValue > 500){
         pitchValue = 500;
@@ -522,17 +531,17 @@ void loop() {
         esc1Value  = esc1Value * (comp);
       }
       */
-      if(esc1Value <= 1100){
-        esc1Value = 1100;
+      if(esc1Value <= 1000){
+        esc1Value = 1000;
       }
-      if(esc2Value <= 1100){
-        esc2Value = 1100;
+      if(esc2Value <= 1000){
+        esc2Value = 1000;
       }
-      if(esc3Value <= 1100){
-        esc3Value = 1100;
+      if(esc3Value <= 1000){
+        esc3Value = 1000;
       }
-      if(esc4Value <= 1100){
-        esc4Value = 1100;
+      if(esc4Value <= 1000){
+        esc4Value = 1000;
       }
       if(esc1Value >= highestThrottle){
         esc1Value = highestThrottle;
