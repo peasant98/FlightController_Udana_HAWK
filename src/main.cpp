@@ -316,17 +316,16 @@ void loop() {
   if (Serial.available()) {
         data = Serial.read();
         Serial.println(data, DEC);
-        // q, w, a, s, z, x, e, r
         // below are all the ascii codes for the keys that add functionality to the drone
         // roll - x
         // pitch - y
         // yaw - z, user can increment or decrement these values
         if(data == 113){
-          throttleValue+=5.0;
+          throttleValue+=4.0;
           notCalibrating = true;
         }
         else if(data == 119){
-          throttleValue-=5.0;
+          throttleValue-=4.0;
           notCalibrating = true;
         }
         else if(data == 97){
