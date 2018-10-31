@@ -7,13 +7,10 @@
 #include "..\resources\Adafruit_LSM9DS1.cpp"
 #include <math.h>
 
-// written by Matthew Strong, sophomore at CU Boulder
-// CTO of Udana Systems, 2018
+// written by Matthew Strong
 // Code for the Udana HAWK Drone
 
 // first 'version' is based on a drone that can be controlled by a keyboard
-// a brief abstract of the following code:
-// I developed the code with the keyboard essentially following a
 #define Pi 3.1415926589793238
 #define MIN_PULSE_LENGTH 1000
 // Minimum pulse length in µs
@@ -84,6 +81,7 @@ void displayInstructions();
 void readData();
 void calibrateESC();
 void gyroCalibrations();
+void routine();
 //Motor 1 : front left - clockwise
 //Motor 2 : front right - counter-clockwise
 //Motor 3 : rear left - clockwise
@@ -312,11 +310,10 @@ void loop() {
   float prevYaw = yawValue;
   float prevRoll = rollValue;
   bool notCalibrating = true;
-  // serial will be available with the raspberry pi, via bluetooth input
+  // serial will be available with the raspberry pi
   if (Serial.available()) {
         data = Serial.read();
         Serial.println(data, DEC);
-        // below are all the ascii codes for the keys that add functionality to the drone
         // roll - x
         // pitch - y
         // yaw - z, user can increment or decrement these values
@@ -356,8 +353,6 @@ void loop() {
           if(startingCode == 1){
             // if the drone is in the starting condition we can bring it to a stop, not the other way around
             sendUnison(MIN_PULSE_LENGTH);
-
-            //Serial.println("Bringing down the values down to 0.");
             startingCode = 0;
           }
         }
@@ -391,7 +386,6 @@ void loop() {
           //startingCode = 1;
         }
         else if(data == 49){
-
           //Serial.println("Sending maximum throttle");
           sendUnison(MAX_PULSE_LENGTH);
           notCalibrating = false;
@@ -461,6 +455,8 @@ void loop() {
     yawInputGyro = gyroArr[2] - yawCalibration;
     // actual data read in from the yaw
 
+    // need some actual accurate reading while calculating the roll setpoint
+
     // rollSetpoint is (500-)
     pitchSetpoint -= pitchAdjust;
     // pitchSetpoint is desired user value - adjusted pitch
@@ -486,6 +482,7 @@ void loop() {
         throttle = highestThrottle;
       }
       // when the drone is stationary need to account for that error...
+
         //Calculate the pulse for esc 1 (front-right - CCW), PIN 11, esc C
         esc1Value = throttle - pidPitchOutput + pidRollOutput - pidYawOutput;
         //Calculate the pulse for esc 2 (rear-right - CW), PIN 9, esc B
@@ -549,15 +546,15 @@ void loop() {
 
     // adding the cumulative roll angle as the integral of deg/s.
 
-    rollAngle += (gyroArr[0] * timerVal);
-    pitchAngle += (gyroArr[1] * timerVal);
-    yawAngle += (gyroArr[2] * timerVal);
-    // pi arctan(1)/4;
+    rollAngle += (rollInputGyro * timerVal);
+    pitchAngle += (pitchInputGyro * timerVal);
+    yawAngle += (yawInputGyro* timerVal);
+    // pi arctan(1)/4;ss
 
     // a check to see if the yaw has transferred to the roll and/or pitch angle
     // subtract the angle if necessary based on these factors
-    rollAngle -= pitchAngle * sin(gyroArr[2] * timerVal * (Pi / 180));
-    pitchAngle += rollAngle * sin(gyroArr[2] * timerVal * (Pi / 180));
+    rollAngle += pitchAngle * sin(gyroArr[2] * timerVal * (Pi / 180));
+    pitchAngle -= rollAngle * sin(gyroArr[2] * timerVal * (Pi / 180));
 
     float accelerationNetVector = accArr[3];
     float anglePitchAcceleration = 0;
@@ -570,8 +567,8 @@ void loop() {
       angleRollAcceleration = asin(float(accArr[0])/accelerationNetVector) * -57.296;
     }
 
-    pitchAngle = (pitchAngle * 0.996) + (anglePitchAcceleration * 0.004);
-    rollAngle = (rollAngle * 0.996) + (angleRollAcceleration * 0.004);
+    pitchAngle = (pitchAngle * 0.995) + (anglePitchAcceleration * 0.005);
+    rollAngle = (rollAngle * 0.995) + (angleRollAcceleration * 0.005);
     // a way to prevent the extra noise from the vibrations of the escs
     // will subtract from the pitch and roll setpoint
     pitchAdjust = pitchAngle * 15;
@@ -624,7 +621,7 @@ void calibrateESC(){
   // later ... have something that automatically handles this
   delay(4000);
   sendUnison(MIN_PULSE_LENGTH);
-  delay(4000);
+  delay(3000);
   //Serial.print("Hopefully all four escs should be calibrated... and made the successful startup sound.");
   startingCode = 1;
 }
@@ -665,9 +662,6 @@ void readData(){
   //Serial.print("\tY: "); Serial.print(m.magnetic.y);     Serial.print(" gauss");
   //Serial.print("\tZ: "); Serial.print(m.magnetic.z);     Serial.println(" gauss");
   // degrees per second
-  //Serial.print("Roll: "); Serial.print(g.gyro.x);   Serial.print(" dps");
-  //Serial.print("Pitch: "); Serial.print(g.gyro.y);      Serial.print(" dps");
-  //Serial.print("Yaw: "); Serial.print(g.gyro.z);      S
   float gyroX = g.gyro.x * g.gyro.x;
   float gyroY = g.gyro.y * g.gyro.y;
   float gyroZ = g.gyro.z * g.gyro.z;
@@ -694,3 +688,12 @@ void readData(){
 }
 
 // kalman filter to filter out noise - do we need it for now?
+
+
+
+void routine(){
+  // to write: will write a straightforward function that performs a rudimentary
+  // flight routine where once this function is started, the drone will fly up a little bit and then down
+ // will later not be needed, for testing purposes currently.
+
+}
