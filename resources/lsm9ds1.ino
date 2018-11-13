@@ -4,6 +4,7 @@
 #include <Adafruit_Sensor.h>  // not used in this demo but required!
 
 // i2c
+// test script for using this sensor (built in accelerometer, gyro, and magnetometer)
 Adafruit_LSM9DS1 lsm = Adafruit_LSM9DS1(LSM9DS1_XGCS, LSM9DS1_MCS);
 
 #define LSM9DS1_SCK A5
