@@ -6,7 +6,6 @@
 #include "..\resources\Adafruit_LSM9DS1.h"
 #include "..\resources\Adafruit_LSM9DS1.cpp"
 #include <math.h>
-
 // written by Matthew Strong
 // Code for the Udana HAWK Drone
 
@@ -24,7 +23,7 @@ float throttleValue, pitchValue, yawValue, rollValue;
 float angleRollAcc, anglePitchAcc, anglePitch, angleRoll;
 bool anglesSet;
 bool readyToGo;
-
+int highestThrottle = 1950;
 // p, i, and d settings for the roll
 float PgainRoll = 1.2;
 float IgainRoll = 0.04;
@@ -45,6 +44,9 @@ int pidMaxPitch = pidMaxRoll;
 float PgainYaw = 4.0;
 float IgainYaw = 0.02;
 float DgainYaw = 0.0;
+
+
+
 int rollAngle, pitchAngle, yawAngle;
 
 int pidMaxYaw = pidMaxRoll;
@@ -74,7 +76,7 @@ bool autoLeveling = true;
 // some arrays to keep track of gyro and acceleration so far
 // define any necessary PINs here
 float gyroArr[4] = {0,0,0,0};
-float accArr[4] = {0, 0,0,0};
+float accArr[4] = {0,0,0,0};
 // declaring functions in advance
 void test();
 void displayInstructions();
@@ -82,6 +84,10 @@ void readData();
 void calibrateESC();
 void gyroCalibrations();
 void routine();
+
+unsigned int calcTimeSpan(int freq);
+
+unsigned int del;
 //Motor 1 : front left - clockwise
 //Motor 2 : front right - counter-clockwise
 //Motor 3 : rear left - clockwise
@@ -100,8 +106,6 @@ void setup() {
     Serial.println("Ooops, no LSM9DS1 detected ... Check your wiring!");
   }
   else{
-    //Serial.println("Success!");
-
     // setting up acceleration, magnetism and gyro
     lsm.setupAccel(lsm.LSM9DS1_ACCELRANGE_2G);
     //lsm.setupAccel(lsm.LSM9DS1_ACCELRANGE_4G);
@@ -162,8 +166,8 @@ void setup() {
     pitchAdjust = 0;
     rollAdjust = 0;
     readyToGo = false;
+    del = calcTimeSpan(50);
     timerDrone = micros();
-
     // type of micros is unsigned long here
     // amount in the battery
     // all steps before doing anything
@@ -171,7 +175,6 @@ void setup() {
 }
 void displayInstructions()
 {
-    // displays all of the options for the user, only displays once so that it's not displaying over and over and over again.
     Serial.println("Welcome to the Udana HAWK Serial Console!");
     Serial.println("");
     Serial.println("Choose an Option:");
@@ -187,9 +190,9 @@ void displayInstructions()
     Serial.println("P - Go, get the drone to begin again");
     Serial.println("0 : Send min throttle");
     Serial.println("1 : Send max throttle");
-    // done with the test
-    //Serial.println("2 : Run test function");
 }
+
+
 // pid algorithm is here, once we have the desired user inputs we can calculate what pulse we must send to each of the motors
 // the input for the function will be in degrees per second
 // note that throttle is independent of these values, that really determines how far up the drone goes, not its x, y, or z orientation and desired
@@ -211,8 +214,8 @@ void findPID(){
   else if(iMemRoll < (pidMaxRoll*-1)){
     iMemRoll = (pidMaxRoll * -1);
   }
-
   pidRollOutput = PgainRoll * pidErrorTemp + iMemRoll + DgainRoll * (pidErrorTemp - pidLastRoll_D_Error);
+
   if(pidRollOutput > pidMaxRoll){
     pidRollOutput = pidMaxRoll;
   }
@@ -283,7 +286,7 @@ void findPID(){
   // the refresh rate of the 30A BLD escs is 50 - 60 Hz
   //escs need pulse every 1/50 = 20ms
   // higher refresh rate - 60  - 1/60 -> 16.6ms -> 17 ms
-  // take higher value because of the uncertainty of the values
+  // take higher value because of the uncertainty of the values, less cycles per second
 void sendUnison(int uniValue){
   esc1.writeMicroseconds(uniValue);
   esc2.writeMicroseconds(uniValue);
@@ -314,85 +317,100 @@ void loop() {
   if (Serial.available()) {
         data = Serial.read();
         Serial.println(data, DEC);
+        /*
+        */
+        switch (data){
+          case 113:
+            throttleValue+=4.0;
+            notCalibrating = true;
+            break;
+
+          case 119:
+            throttleValue-=4.0;
+            notCalibrating = true;
+            break;
+
+          case 97:
+            pitchValue+=25.0;
+            notCalibrating = true;
+            break;
+
+          case 115:
+            pitchValue-=25.0;
+            notCalibrating = true;
+            break;
+
+          case 122:
+            yawValue+=25.0;
+            notCalibrating = true;
+            break;
+
+          case 120:
+            yawValue-=25.0;
+            notCalibrating = true;
+            break;
+
+          case 101:
+            rollValue+=25.0;
+            notCalibrating = true;
+            break;
+
+          case 114:
+            rollValue-=25.0;
+            notCalibrating = true;
+            break;
+
+          case 111:
+            if(startingCode){
+              // if the drone is in the starting condition we can bring it to a stop, not the other way around
+              sendUnison(MIN_PULSE_LENGTH);
+              startingCode = 0;
+            }
+            break;
+
+          case 112:
+            if(!startingCode){
+              calibrateESC();
+              // recalibrate esc because the starting code is now 0
+              iMemRoll = 0;
+              iMemPitch = 0;
+              iMemYaw = 0;
+              pidLastRoll_D_Error = 0;
+              pidLastPitch_D_Error = 0;
+              pidLastYaw_D_Error = 0;
+              // resetting all of the pid values when everything is restarted.
+              //Serial.println("Restarting the HAWK from being STATIONARY...");
+              // the HAWK has already been calibrated at this point in the program though
+              startingCode = 1;
+            }
+            break;
+
+          case 48:
+            //Serial.println("Sending minimum throttle");
+            sendUnison(MIN_PULSE_LENGTH);
+            notCalibrating = false;
+            anglePitch = anglePitchAcc;
+            angleRoll = angleRollAcc;
+            // conduct the testing and starting up the drone
+            readyToGo = true;
+            anglesSet = true;
+            delay(5000);
+            startingCode = 1;
+            //startingCode = 1;
+            break;
+
+          case 49:
+            //Serial.println("Sending maximum throttle");
+            sendUnison(MAX_PULSE_LENGTH);
+            notCalibrating = false;
+            break;
+        }
         // roll - x
         // pitch - y
         // yaw - z, user can increment or decrement these values
-        if(data == 113){
-          throttleValue+=4.0;
-          notCalibrating = true;
-        }
-        else if(data == 119){
-          throttleValue-=4.0;
-          notCalibrating = true;
-        }
-        else if(data == 97){
-          pitchValue+=25.0;
-          notCalibrating = true;
-        }
-        else if(data == 115){
-          pitchValue-=25.0;
-          notCalibrating = true;
-        }
-        else if(data == 122){
-          yawValue+=25.0;
-          notCalibrating = true;
-        }
-        else if(data == 120){
-          yawValue-=25.0;
-          notCalibrating = true;
-        }
-        else if(data == 101){
-          rollValue+=25.0;
-          notCalibrating = true;
-        }
-        else if(data == 114){
-          rollValue-=25.0;
-          notCalibrating = true;
-        }
-        else if(data == 111){
-          if(startingCode == 1){
-            // if the drone is in the starting condition we can bring it to a stop, not the other way around
-            sendUnison(MIN_PULSE_LENGTH);
-            startingCode = 0;
-          }
-        }
-        else if(data == 112){
-          if(startingCode == 0){
-            calibrateESC();
-            // recalibrate esc because the starting code is now 0
-            iMemRoll = 0;
-            iMemPitch = 0;
-            iMemYaw = 0;
-            pidLastRoll_D_Error = 0;
-            pidLastPitch_D_Error = 0;
-            pidLastYaw_D_Error = 0;
-            // resetting all of the pid values when everything is restarted.
-            //Serial.println("Restarting the HAWK from being STATIONARY...");
-            // the HAWK has already been calibrated at this point in the program though
-            startingCode = 1;
-          }
-        }
-        else if(data == 48){
-          //Serial.println("Sending minimum throttle");
-          sendUnison(MIN_PULSE_LENGTH);
-          notCalibrating = false;
-          anglePitch = anglePitchAcc;
-          angleRoll = angleRollAcc;
-          // conduct the testing and starting up the drone
-          readyToGo = true;
-          anglesSet = true;
-          delay(5000);
-          startingCode = 1;
-          //startingCode = 1;
-        }
-        else if(data == 49){
-          //Serial.println("Sending maximum throttle");
-          sendUnison(MAX_PULSE_LENGTH);
-          notCalibrating = false;
-        }
         // all other cases are just ignored.
     }
-    if(notCalibrating and startingCode == 1){
+    if(notCalibrating and startingCode){
       // the drone must be at the startingCode of 1 to be able to be written a pulse too
       if(prevThrottle == throttleValue){
         throttleValue = prevThrottle;
@@ -417,7 +435,7 @@ void loop() {
       else if(throttleValue <= (1000)){
         throttleValue = 1000;
       }
-      if(pitchValue > 500){
+      if(pitchValue >= 500){
         pitchValue = 500;
       }
       else if(pitchValue <= -500){
@@ -474,10 +492,9 @@ void loop() {
     //pidPitchOutput = 0;
     //pidRollOutput = 0;
     //pidYawOutput = 0;
-    int highestThrottle = 1950;
     // throttle is a continous thing, tilting a part that's not throttle
     // if the drone is not flying, the code should reflect it, and as such, the startingCode should be 1
-    if(startingCode == 1 and notCalibrating==true){
+    if(startingCode && notCalibrating){
       if(throttle >= highestThrottle){
         throttle = highestThrottle;
       }
@@ -500,29 +517,33 @@ void loop() {
       if(esc1Value <= 1000){
         esc1Value = 1000;
       }
+      else if(esc1Value >= highestThrottle){
+        esc1Value = highestThrottle;
+      }
+
       if(esc2Value <= 1000){
         esc2Value = 1000;
       }
+      else if(esc2Value >= highestThrottle){
+        esc2Value = highestThrottle;
+      }
+
       if(esc3Value <= 1000){
         esc3Value = 1000;
       }
+      else if(esc3Value >= highestThrottle){
+        esc3Value = highestThrottle;
+      }
+
       if(esc4Value <= 1000){
         esc4Value = 1000;
       }
-      if(esc1Value >= highestThrottle){
-        esc1Value = highestThrottle;
-      }
-      if(esc2Value >= highestThrottle){
-        esc2Value = highestThrottle;
-      }
-      if(esc3Value >= highestThrottle){
-        esc3Value = highestThrottle;
-      }
-      if(esc4Value >= highestThrottle){
+      else if(esc4Value >= highestThrottle){
         esc4Value = highestThrottle;
       }
+
     }
-    else if (notCalibrating==true && startingCode==0){
+    else if (notCalibrating && !(startingCode)){
       // case where startingCode is 0 - the drone isn't in starting mode yet
       esc1Value = 1000;
       esc2Value = 1000;
@@ -532,16 +553,20 @@ void loop() {
     // writing the necessary pulse to each individual ESC based on the pid controller algorithm; each value is different
     // the refresh rate of these escs is 50-60 Hz - take the lower end of it and have a loop that runs every 20,000us because that
     // is the max interval to send pulse to escs
-    if(notCalibrating and startingCode == 1){
+    if(notCalibrating && startingCode){
       // when the escs are being calibrated, we don't want to execute this line of code.
+      // otherwise write the desired throttle output to the escs
       esc1.writeMicroseconds(esc1Value);
       esc2.writeMicroseconds(esc2Value);
       esc3.writeMicroseconds(esc3Value);
       esc4.writeMicroseconds(esc4Value);
     }
     //delay(200); // just a simple delay, will need microsecond timer later
-    while(micros() - timerDrone <= 20000);
+    while(micros() - timerDrone <= del);
     timerDrone = micros();
+    // reset the timer for the next cycle of sending a command to the drone
+
+    // first read the data and take note of the angle
     readData();
 
     // adding the cumulative roll angle as the integral of deg/s.
@@ -552,7 +577,7 @@ void loop() {
     // pi arctan(1)/4;ss
 
     // a check to see if the yaw has transferred to the roll and/or pitch angle
-    // subtract the angle if necessary based on these factors
+    // subtract or add the angle if necessary based on these factors
     rollAngle += pitchAngle * sin(gyroArr[2] * timerVal * (Pi / 180));
     pitchAngle -= rollAngle * sin(gyroArr[2] * timerVal * (Pi / 180));
 
@@ -567,10 +592,11 @@ void loop() {
       angleRollAcceleration = asin(float(accArr[0])/accelerationNetVector) * -57.296;
     }
 
-    pitchAngle = (pitchAngle * 0.995) + (anglePitchAcceleration * 0.005);
-    rollAngle = (rollAngle * 0.995) + (angleRollAcceleration * 0.005);
+    pitchAngle = (pitchAngle * 0.994) + (anglePitchAcceleration * 0.006);
+    rollAngle = (rollAngle * 0.994) + (angleRollAcceleration * 0.006);
     // a way to prevent the extra noise from the vibrations of the escs
     // will subtract from the pitch and roll setpoint
+    // the bigger the angle, the harder the drone will fight back to get back to position
     pitchAdjust = pitchAngle * 15;
     rollAdjust = rollAngle * 15;
     // both need to be in terms of the angle of the pitch and roll
@@ -580,10 +606,8 @@ void loop() {
       rollAdjust = 0;
     }
     // pitch and roll correction
-    //0.000001066 = 0.0000611 * (3.142(PI) / 180degr) The Arduino sin function is in radian
-
+    //(3.142(PI) / 180degr) The Arduino sin function is in radian
     // find integral of dps for angular position of drone
-
     // reset microsecond timer
   /*
     batteryVoltage = batteryVoltage * 0.92 + (analogRead(0) + 65) * 0.09853;
@@ -593,7 +617,6 @@ void loop() {
     }
 */
 }
-
 void gyroCalibrations(){
   rollCalibration = 0;
   pitchCalibration = 0;
@@ -674,19 +697,8 @@ void readData(){
   gyroArr[3] = gyroResult;
 // naive filter commented out
   /*
-  if(abs(gyroArr[0])<=8){
-    gyroArr[0] = 0;
-
-  }
-  if(abs(gyroArr[1])<=8){
-    gyroArr[1] = 0;
-  }
-  if(abs(gyroArr[2])<=8){
-    gyroArr[2] = 0;
-  }
   */
 }
-
 // kalman filter to filter out noise - do we need it for now?
 
 
@@ -696,4 +708,14 @@ void routine(){
   // flight routine where once this function is started, the drone will fly up a little bit and then down
  // will later not be needed, for testing purposes currently.
 
+ // start Drone, calibrate everything
+
+ // begin hovering for s seconds at altitude a
+
+ // lower back down to the ground after this.
+
+}
+
+unsigned int calcTimeSpan(int hz){
+  return ((1/hz) * 1000000);
 }
