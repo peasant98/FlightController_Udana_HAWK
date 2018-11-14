@@ -21,8 +21,6 @@
 
 float throttleValue, pitchValue, yawValue, rollValue;
 float angleRollAcc, anglePitchAcc, anglePitch, angleRoll;
-bool anglesSet;
-bool readyToGo;
 int highestThrottle = 1950;
 // p, i, and d settings for the roll
 float PgainRoll = 1.2;
@@ -55,6 +53,7 @@ int accelerationX, accelerationY, accelerationZ, accelerationNet;
 int throttle;
 
 const float timerVal = (0.02);
+// timer val
 float batteryVoltage;
 float pidErrorTemp;
 float iMemRoll, iMemPitch, iMemYaw;
@@ -92,8 +91,8 @@ unsigned int del;
 //Motor 2 : front right - counter-clockwise
 //Motor 3 : rear left - clockwise
 //Motor 4 : rear left - counter-clockwise
+// this is the case with every drone we make!
 // each one connected as an esc using the Servo library
-// here I will declare all of the 'global' variables that I will be able to use in the setup loop,
 void setup() {
     // put your setup code here, to run once:
     // the main code that is very similar to the arduino code
@@ -165,7 +164,6 @@ void setup() {
     yawAngle = 0;
     pitchAdjust = 0;
     rollAdjust = 0;
-    readyToGo = false;
     del = calcTimeSpan(50);
     timerDrone = micros();
     // type of micros is unsigned long here
@@ -193,7 +191,7 @@ void displayInstructions()
 }
 
 
-// pid algorithm is here, once we have the desired user inputs we can calculate what pulse we must send to each of the motors
+// pid algorithm: once we have the desired user inputs we can calculate what pulse we must send to each of the motors
 // the input for the function will be in degrees per second
 // note that throttle is independent of these values, that really determines how far up the drone goes, not its x, y, or z orientation and desired
 // direction.
@@ -317,8 +315,7 @@ void loop() {
   if (Serial.available()) {
         data = Serial.read();
         Serial.println(data, DEC);
-        /*
-        */
+        // switch statement more effective than numerous if statements
         switch (data){
           case 113:
             throttleValue+=4.0;
@@ -386,21 +383,18 @@ void loop() {
             break;
 
           case 48:
-            //Serial.println("Sending minimum throttle");
             sendUnison(MIN_PULSE_LENGTH);
             notCalibrating = false;
             anglePitch = anglePitchAcc;
             angleRoll = angleRollAcc;
             // conduct the testing and starting up the drone
-            readyToGo = true;
-            anglesSet = true;
+
             delay(5000);
             startingCode = 1;
             //startingCode = 1;
             break;
 
           case 49:
-            //Serial.println("Sending maximum throttle");
             sendUnison(MAX_PULSE_LENGTH);
             notCalibrating = false;
             break;
@@ -408,10 +402,9 @@ void loop() {
         // roll - x
         // pitch - y
         // yaw - z, user can increment or decrement these values
-        // all other cases are just ignored.
     }
     if(notCalibrating and startingCode){
-      // the drone must be at the startingCode of 1 to be able to be written a pulse too
+      // the drone must be at the startingCode of 1 to be able to be written a pulse to
       if(prevThrottle == throttleValue){
         throttleValue = prevThrottle;
       }
@@ -450,7 +443,7 @@ void loop() {
       if(yawValue >= 500){
         yawValue = 500;
       }
-      else if(yawValue <= (-500)){
+      else if(yawValue <= -500){
         yawValue = -500;
       }
       // after all of the edge cases, we can set the pidsetpoints to what the user has provided... then calibrate via the angle
