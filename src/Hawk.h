@@ -68,13 +68,14 @@ public:
 
   int extendedKalman();
   // a kalman filter to get the most accurate potrayal of the data
-
   unsigned int calcTimeSpan(int hz);
   // calculates the time in between sending a signal to all of the escs.
 
 private:
 
   Servo esc1, esc2, esc3, esc4;
+
+
   // servos for the hawk
 
   const float timerVal;
