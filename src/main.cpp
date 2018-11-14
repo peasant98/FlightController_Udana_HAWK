@@ -689,9 +689,7 @@ void readData(){
   gyroArr[1] = g.gyro.y;
   gyroArr[2] = g.gyro.z;
   gyroArr[3] = gyroResult;
-// naive filter commented out
-  /*
-  */
+
 }
 // kalman filter to filter out noise - do we need it for now?
 
