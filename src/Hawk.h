@@ -21,9 +21,9 @@
 
 class Hawk{
 public:
-  Hawk(unsigned int hertz, int minPulse, int maxPulse);
+  Hawk(int hertz, int minPulse, int maxPulse);
   // drone constructor
-  void setPIDParameters(float p, float i, float d, float maxer, int axis);
+  void setPIDParameters(float p, float i, float d, int maxer, int axis);
   // allows user to set the pid parameters of the drone for the axes of rotation
 
   void beginProcess();
@@ -75,7 +75,7 @@ private:
 
   Servo esc1, esc2, esc3, esc4;
 
-
+  unsigned int span;
   // servos for the hawk
 
   const float timerVal;
@@ -84,17 +84,31 @@ private:
 
   */
 
-  Adafruit_LSM9DS1 priSensor = Adafruit_LSM9DS1();
+  Adafruit_LSM9DS1 priSensor;
   // sensor!
 
-  float pi = 3.1415926589793238;
+  float pi;
   // PI!
   int highestPulse, lowestPulse;
   // lowest and highest pulse to be sent by this flight controller
 
+
+  int accelerationX, accelerationY, accelerationZ, accelerationNet;
+  int throttle;
+
   // below are all internal variables of the drone to keep track of its state
   float throttleValue, pitchValue, yawValue, rollValue;
   //
+
+  float PgainRoll, IgainRoll, DgainRoll;
+  int pidMaxRoll;
+
+  float PgainPitch, IgainPitch, DgainPitch;
+  int pidMaxPitch;
+
+  float PgainYaw, IgainYaw, DgainYaw;
+  int pidMaxYaw;
+
 
   float angleRollAcc, anglePitchAcc, anglePitch, angleRoll;
 
@@ -115,14 +129,12 @@ private:
   float rollCalibration, pitchCalibration, yawCalibration;
   int startingCode;
   float rollAdjust, pitchAdjust;
-  bool autoLeveling = true;
+  bool autoLeveling;
   // arrays to hold the data from the sensors of the drone at any time.
-  float gyroArr[4] = {0,0,0,0};
-  float accArr[4] = {0,0,0,0};
+  float gyroArr[4];
+  float accArr[4];
   // keep the sensor private!
   // calculates the time span for the drone
-
-
   // private:
   /*
     4 escs
@@ -130,6 +142,7 @@ private:
   */
 
 };
+
 
 
 #endif
