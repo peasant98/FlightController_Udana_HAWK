@@ -1,3 +1,8 @@
+/* In case something goes wrong with the drone implementation of
+everything, this code (which is the essentially) non-refactored
+code that has the functionality desired.
+
+*/
 #include <Arduino.h>
 #include <Wire.h>
 #include <SPI.h>
@@ -16,7 +21,6 @@
 #define MAX_PULSE_LENGTH 2000
 // Maximum pulse length in µs
 // in order to have stabilize mode, need to keep track of the current angle of the drone
-
 
 // important values for keePINg track of things
 
@@ -102,7 +106,7 @@ void setup() {
     // seeing if the sensor works and is connected correctly
     if(!lsm.begin())
   {
-    // issue wit h connecting
+    // issue with connecting
     Serial.println("Ooops, no LSM9DS1 detected ... Check your wiring!");
   }
   else{
@@ -116,7 +120,7 @@ void setup() {
     //lsm.setupMag(lsm.LSM9DS1_MAGGAIN_8GAUSS);
     //lsm.setupMag(lsm.LSM9DS1_MAGGAIN_12GAUSS);
     //lsm.setupMag(lsm.LSM9DS1_MAGGAIN_16GAUSS);
-    // max dps is 24
+    // max dps is 245
     lsm.setupGyro(lsm.LSM9DS1_GYROSCALE_245DPS);
     //lsm.setupGyro(lsm.LS  M9DS1_GYROSCALE_500DPS);
     //lsm.setupGyro(lsm.LSM9DS1_GYROSCALE_2000DPS);
@@ -689,7 +693,9 @@ void readData(){
   gyroArr[1] = g.gyro.y;
   gyroArr[2] = g.gyro.z;
   gyroArr[3] = gyroResult;
-
+// naive filter commented out
+  /*
+  */
 }
 // kalman filter to filter out noise - do we need it for now?
 
