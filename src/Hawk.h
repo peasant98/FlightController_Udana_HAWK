@@ -21,7 +21,7 @@
 
 class Hawk{
 public:
-  Hawk(int hertz, int minPulse, int maxPulse); // =
+  Hawk(int hertz, int minPulse, int maxPulse, bool selfStabilizing); // =
   // drone constructor
   void setPIDParameters(float p, float i, float d, int maxer, int axis); // =
   // allows user to set the pid parameters of the drone for the axes of rotation
@@ -73,14 +73,20 @@ public:
   void perform(); // =
   // without this, no signals are sent to escs
 
+  void routine();
+  // to do!
+
+
+
 private:
+
+  float timerVal;
 
   Servo esc1, esc2, esc3, esc4;
 
   unsigned int span;
   // servos for the hawk
 
-  const float timerVal;
   /* time in between each successive iteration of the loop,
   goal is to integrate degrees/sec to determine drone's angular position.
 
@@ -136,10 +142,11 @@ private:
   bool autoLeveling, notCalibrating;
 
   // arrays to hold the data from the sensors of the drone at any time.
-  float gyroArr[4];
-  float accArr[4];
+  float gyroArr[4] = {0,0,0,0};
+  float accArr[4] = {0,0,0,0};
 
   float minimizeAbsValue(float previous, float toChange);
+  float prevThrottle, prevPitch, prevYaw, prevRoll;
 
   // keep the sensor private!
   // calculates the time span for the drone

@@ -1,21 +1,20 @@
+
 #include <Arduino.h>
 #include <Wire.h>
 #include <SPI.h>
 #include <Servo.h>
-#include "..\resources\Adafruit_Sensor.h"
-#include "..\resources\Adafruit_LSM9DS1.h"
-#include "..\resources\Adafruit_LSM9DS1.cpp"
+//#include "..\resources\Adafruit_Sensor.h"
+//#include "..\resources\Adafruit_LSM9DS1.h"
+//#include "..\resources\Adafruit_LSM9DS1.cpp"
 #include <math.h>
 #include "Hawk.h"
 
 
-Hawk::Hawk(int hertz, int minPulse, int maxPulse){
+Hawk::Hawk(int hertz, int minPulse, int maxPulse, bool selfStabilizing){
   priSensor = Adafruit_LSM9DS1();
   // sensor!
-  pi = 3.14159265358979323846
-  gyroArr = {0,0,0,0};
-  accArr = {0,0,0,0};
-  autoLeveling = true;
+  pi = 3.14159265358979323846;
+  autoLeveling = selfStabilizing;
   span = calcTimeSpan(hertz);
   highestPulse = maxPulse;
   lowestPulse = minPulse;
@@ -67,17 +66,17 @@ void Hawk::beginProcess(){
 }
 else{
   // setting up acceleration, magnetism and gyro
-  priSensor.setupAccel(lsm.LSM9DS1_ACCELRANGE_2G);
+  priSensor.setupAccel(priSensor.LSM9DS1_ACCELRANGE_2G);
   //lsm.setupAccel(lsm.LSM9DS1_ACCELRANGE_4G);
   //lsm.setupAccel(lsm.LSM9DS1_ACCELRANGE_8G);
   //lsm.setupAccel(lsm.LSM9DS1_ACCELRANGE_16G);
   // 2.) Set the magnetometer sensitivity
-  priSensor.setupMag(lsm.LSM9DS1_MAGGAIN_4GAUSS);
+  priSensor.setupMag(priSensor.LSM9DS1_MAGGAIN_4GAUSS);
   //lsm.setupMag(lsm.LSM9DS1_MAGGAIN_8GAUSS);
   //lsm.setupMag(lsm.LSM9DS1_MAGGAIN_12GAUSS);
   //lsm.setupMag(lsm.LSM9DS1_MAGGAIN_16GAUSS);
   // max dps is 24
-  priSensor.setupGyro(lsm.LSM9DS1_GYROSCALE_245DPS);
+  priSensor.setupGyro(priSensor.LSM9DS1_GYROSCALE_245DPS);
   //lsm.setupGyro(lsm.LS  M9DS1_GYROSCALE_500DPS);
   //lsm.setupGyro(lsm.LSM9DS1_GYROSCALE_2000DPS);
   startingCode = 0;
@@ -109,8 +108,20 @@ else{
   yawAngle = 0;
   pitchAdjust = 0;
   rollAdjust = 0;
+
+
+  iMemRoll = 0;
+  iMemPitch = 0;
+  iMemYaw = 0;
+  pidLastRoll_D_Error = 0;
+  pidLastPitch_D_Error = 0;
+  pidLastYaw_D_Error = 0;
+
+
   timerDrone = micros();
   // begin the microsecond timer
+
+}
 
 }
 
@@ -183,7 +194,7 @@ void Hawk::display(){
   Serial.println("P - Go, get the drone to begin again");
   Serial.println("0 - Send min throttle");
   Serial.println("1 - Send max throttle");
-  Serial.println("T - Terminate communication to the drone ")
+  Serial.println("T - Terminate communication to the drone ");
 }
 
 void Hawk::calibrateESCS(){
@@ -317,7 +328,7 @@ void Hawk::userInputHandler(){
   notCalibrating = true;
   if (Serial.available()){
     userInput = Serial.read();
-    Serial.println(userInput, dec);
+    Serial.println(userInput, DEC);
     switch(userInput){
 
       case 113:
@@ -429,7 +440,6 @@ float Hawk::minimizeAbsValue(float previous, float toChange){
   */
 }
 
-
 void Hawk::edgesCheck(){
   /* make sure the values from userInputHandler()
   are valid and within bounds
@@ -528,8 +538,8 @@ int Hawk::throttleEval(){
   cap the throttle at the lowest throttle value in order to prevent
   abnormal signals*/
   if(startingCode && notCalibrating){
-    if(throttle >= highestThrottle){
-      throttle = highestThrottle;
+    if(throttle >= highestPulse){
+      throttle = highestPulse;
     }
     // when the drone is stationary need to account for that error...
 
@@ -550,29 +560,29 @@ int Hawk::throttleEval(){
     if(esc1Value <= 1000){
       esc1Value = 1000;
     }
-    else if(esc1Value >= highestThrottle){
-      esc1Value = highestThrottle;
+    else if(esc1Value >= highestPulse){
+      esc1Value = highestPulse;
     }
 
     if(esc2Value <= 1000){
       esc2Value = 1000;
     }
-    else if(esc2Value >= highestThrottle){
-      esc2Value = highestThrottle;
+    else if(esc2Value >= highestPulse){
+      esc2Value = highestPulse;
     }
 
     if(esc3Value <= 1000){
       esc3Value = 1000;
     }
-    else if(esc3Value >= highestThrottle){
-      esc3Value = highestThrottle;
+    else if(esc3Value >= highestPulse){
+      esc3Value = highestPulse;
     }
 
     if(esc4Value <= 1000){
       esc4Value = 1000;
     }
-    else if(esc4Value >= highestThrottle){
-      esc4Value = highestThrottle;
+    else if(esc4Value >= highestPulse){
+      esc4Value = highestPulse;
     }
 
   }
@@ -610,13 +620,13 @@ void Hawk::angleAdjust(){
 
   rollAngle += (rollInputGyro * timerVal);
   pitchAngle += (pitchInputGyro * timerVal);
-  yawAngle += (yawInputGyro* timerVal);
+  yawAngle += (yawInputGyro * timerVal);
   // pi arctan(1)/4;ss
 
   // a check to see if the yaw has transferred to the roll and/or pitch angle
   // subtract or add the angle if necessary based on these factors
-  rollAngle += pitchAngle * sin(gyroArr[2] * timerVal * (Pi / 180));
-  pitchAngle -= rollAngle * sin(gyroArr[2] * timerVal * (Pi / 180));
+  rollAngle += pitchAngle * sin(gyroArr[2] * timerVal * (pi / 180));
+  pitchAngle -= rollAngle * sin(gyroArr[2] * timerVal * (pi / 180));
 
   float accelerationNetVector = accArr[3];
   float anglePitchAcceleration = 0;
