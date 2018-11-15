@@ -133,9 +133,8 @@ private:
   float rollCalibration, pitchCalibration, yawCalibration;
   int startingCode;
   float rollAdjust, pitchAdjust;
-  bool autoLeveling;
+  bool autoLeveling, notCalibrating;
 
-  bool notCalibrating;
   // arrays to hold the data from the sensors of the drone at any time.
   float gyroArr[4];
   float accArr[4];

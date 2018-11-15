@@ -209,7 +209,7 @@ void Hawk::extendedKalman(){
   readData();
   /* first we'll need to read the data before making any
   predictions about the system we are modeling.
-  */  
+  */
 }
 
 void Hawk::calcPID(){
@@ -441,14 +441,14 @@ void Hawk::edgesCheck(){
     }
     if(prevPitch == pitchValue){
       // pitch was not changed, bring it down to the absolute value
-      pitchValue  = decrementAbsValue(prevPitch, pitchValue);
+      pitchValue  = minimizeAbsValue(prevPitch, pitchValue);
     }
     if(prevYaw == yawValue){
-      yawValue = decrementAbsValue(prevYaw, yawValue);
+      yawValue = minimizeAbsValue(prevYaw, yawValue);
       // yaw was not changed, bring down to the absolute value
     }
     if(prevRoll == rollValue){
-      rollValue = decrementAbsValue(prevRoll, rollValue);
+      rollValue = minimizeAbsValue(prevRoll, rollValue);
       // roll was not changed, will stabilize back to 0, but not immediately
     }
     // below code ensures that the throttle, pitch, roll, and yaw do not go out of the bounds of the
@@ -519,7 +519,6 @@ void Hawk::setPoints(){
   /// these three values were scaled down to set bounds of the drone
   // will never go above (500/3)
   // most important lines of code above, we need the right inputs in the pid - in degrees per second
-
 }
 
 int Hawk::throttleEval(){
