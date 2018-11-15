@@ -514,21 +514,18 @@ void loop() {
       else if(esc1Value >= highestThrottle){
         esc1Value = highestThrottle;
       }
-
       if(esc2Value <= 1000){
         esc2Value = 1000;
       }
       else if(esc2Value >= highestThrottle){
         esc2Value = highestThrottle;
       }
-
       if(esc3Value <= 1000){
         esc3Value = 1000;
       }
       else if(esc3Value >= highestThrottle){
         esc3Value = highestThrottle;
       }
-
       if(esc4Value <= 1000){
         esc4Value = 1000;
       }

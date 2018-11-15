@@ -1,14 +1,6 @@
-#include <Arduino.h>
-#include <Wire.h>
-#include <SPI.h>
-#include <Servo.h>
-#include "..\resources\Adafruit_Sensor.h"
-#include "..\resources\Adafruit_LSM9DS1.h"
-#include "..\resources\Adafruit_LSM9DS1.cpp"
-#include <math.h>
+
 #include "Hawk.h"
 // including the default Udana HAWK class to work with
-
 
 // written by Matthew Strong
 // Code for the Udana HAWK Drone
@@ -20,9 +12,8 @@
 #define MAX_PULSE_LENGTH 2000
 
 
-Hawk udanaHawk(50, 1000, 1950);
+Hawk udanaHawk(50, 1000, 1950, true);
 // udana hawk that's global to the whole program.
-
 
 // setup
 void setup(){
@@ -30,16 +21,17 @@ void setup(){
   Serial.begin(9600);
   //set pid parameters
   udanaHawk.setPIDParameters(1.2, 0.04, 3.5, 400, 0);
+  // roll parameters
   udanaHawk.setPIDParameters(1.2, 0.04, 3.5, 400, 1);
+  // pitch parameters
   udanaHawk.setPIDParameters(4.0, 0.02, 0.0, 400, 2);
+  // yaw parameters
   // setting the pid parameters for the drone
   udanaHawk.beginProcess();
   /* begin the process of calibrating the gyro,
   connecting all of the necessary escs, so that
   the user is ready to interact with the drone.
-
   */
-
 }
 
 
