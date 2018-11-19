@@ -1,13 +1,13 @@
-
 #include <Arduino.h>
 #include <Wire.h>
 #include <SPI.h>
 #include <Servo.h>
-//#include "..\resources\Adafruit_Sensor.h"
-//#include "..\resources\Adafruit_LSM9DS1.h"
-//#include "..\resources\Adafruit_LSM9DS1.cpp"
 #include <math.h>
 #include "Hawk.h"
+
+// next steps: implement a better way to control the
+// desired pitch, yaw, and roll of the user
+// by simulating the receiver, transmitter better.
 
 
 Hawk::Hawk(int hertz, int minPulse, int maxPulse, bool selfStabilizing){
@@ -93,10 +93,10 @@ else{
   // subtract this from the current reading for the best relative value
   // will account for this as the drone is moving
   // getting the averages of everything thus far
-  esc1.attach(11, MIN_PULSE_LENGTH, MAX_PULSE_LENGTH);
-  esc2.attach(9, MIN_PULSE_LENGTH, MAX_PULSE_LENGTH);
-  esc3.attach(10, MIN_PULSE_LENGTH, MAX_PULSE_LENGTH);
-  esc4.attach(12, MIN_PULSE_LENGTH, MAX_PULSE_LENGTH);
+  esc1.attach(11, absoluteLow, absoluteHigh);
+  esc2.attach(9, absoluteLow, absoluteHigh);
+  esc3.attach(10, absoluteLow, absoluteHigh);
+  esc4.attach(12, absoluteLow, absoluteHigh);
   // now for calbrating and arming the escs (one still doesn't work..)
   //calibrateESC();
   // requires the user to plug in the battery10
@@ -321,10 +321,10 @@ void Hawk::userInputHandler(){
   /* takes user input via serial  connection (to the raspberry pi)
   to convert to something usable
   */
-  float prevThrottle = throttleValue;
-  float prevPitch = pitchValue;
-  float prevYaw = yawValue;
-  float prevRoll = rollValue;
+  prevThrottle = throttleValue;
+  prevPitch = pitchValue;
+  prevYaw = yawValue;
+  prevRoll = rollValue;
   notCalibrating = true;
   if (Serial.available()){
     userInput = Serial.read();
@@ -531,7 +531,7 @@ void Hawk::setPoints(){
   // most important lines of code above, we need the right inputs in the pid - in degrees per second
 }
 
-int Hawk::throttleEval(){
+void Hawk::throttleEval(){
   /* evaluates the throttle that needs to be sent to the escs,
   if the throttle is too high, cap it at the max pulse width before
   sending the signal to esc; likewise, if the throttle is too low,
@@ -552,7 +552,7 @@ int Hawk::throttleEval(){
       //Calculate the pulse for esc 4 (front-left - CW), PIN 12, esc D
       esc4Value = throttle - pidPitchOutput - pidRollOutput + pidYawOutput;
     /* - low voltage
-    if(batteryVoltage <1200 && batteryVoltage >700){
+if(batteryVoltage <1200 &&      batteryVoltage >700){
       float comp = (1200-batteryVoltage)/(float(3500));
       esc1Value  = esc1Value * (comp);
     }
@@ -639,13 +639,15 @@ void Hawk::angleAdjust(){
     angleRollAcceleration = asin(float(accArr[0])/accelerationNetVector) * -57.296;
   }
 
-  pitchAngle = (pitchAngle * 0.994) + (anglePitchAcceleration * 0.006);
-  rollAngle = (rollAngle * 0.994) + (angleRollAcceleration * 0.006);
+  pitchAngle = (pitchAngle * 0.95) + (anglePitchAcceleration * 0.05);
+  rollAngle = (rollAngle * 0.95) + (angleRollAcceleration * 0.05);
   // a way to prevent the extra noise from the vibrations of the escs
   // will subtract from the pitch and roll setpoint
   // the bigger the angle, the harder the drone will fight back to get back to position
   pitchAdjust = pitchAngle * 15;
   rollAdjust = rollAngle * 15;
+  // when the angle is already at 0, the drone does no fighting based on the
+  // angle
   // both need to be in terms of the angle of the pitch and roll
   // how much we need to adjust by
   if(!autoLeveling){
@@ -664,3 +666,8 @@ void Hawk::angleAdjust(){
   }
 */
 }
+
+
+/*
+
+*/

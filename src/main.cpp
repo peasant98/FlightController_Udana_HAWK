@@ -53,7 +53,7 @@ int pidMaxYaw = pidMaxRoll;
 int accelerationX, accelerationY, accelerationZ, accelerationNet;
 int throttle;
 
-const float timerVal = (0.02);
+const float timerVal = (0.00204081632);
 // timer val
 float batteryVoltage;
 float pidErrorTemp;
@@ -100,12 +100,14 @@ void setup() {
     Serial.begin(9600);
     // the primary sensor
     // seeing if the sensor works and is connected correctly
+    Serial.println("test");
     if(!lsm.begin())
   {
     // issue wit h connecting
     Serial.println("Ooops, no LSM9DS1 detected ... Check your wiring!");
   }
   else{
+
     // setting up acceleration, magnetism and gyro
     lsm.setupAccel(lsm.LSM9DS1_ACCELRANGE_2G);
     //lsm.setupAccel(lsm.LSM9DS1_ACCELRANGE_4G);
@@ -165,7 +167,7 @@ void setup() {
     yawAngle = 0;
     pitchAdjust = 0;
     rollAdjust = 0;
-    del = calcTimeSpan(50);
+    del = calcTimeSpan(490);
     timerDrone = micros();
     // type of micros is unsigned long here
     // amount in the battery
@@ -267,19 +269,19 @@ void findPID(){
   // pidPitchOutput
 }
 //Calculate the pulse for esc 1 (front-right - CCW)
-// my case: esc C
+// my case: esc B
 // PIN 11
 
 //Calculate the pulse for esc 2 (rear-right - CW)
-// my case: esc B
+// my case: esc C
 // PIN 9
 
 //Calculate the pulse for esc 3 (rear-left - CCW)
-// my case: esc A
+// my case: esc D
 // PIN 10
 
 //Calculate the pulse for esc 4 (front-left - CW)
-// my case: esc D
+// my case: esc A
 // PIN 12
 
   // the refresh rate of the 30A BLD escs is 50 - 60 Hz
@@ -390,7 +392,9 @@ void loop() {
             angleRoll = angleRollAcc;
             // conduct the testing and starting up the drone
 
-            delay(5000);
+            //delay(5000);
+
+
             startingCode = 1;
             //startingCode = 1;
             break;
@@ -583,8 +587,8 @@ void loop() {
       angleRollAcceleration = asin(float(accArr[0])/accelerationNetVector) * -57.296;
     }
 
-    pitchAngle = (pitchAngle * 0.994) + (anglePitchAcceleration * 0.006);
-    rollAngle = (rollAngle * 0.994) + (angleRollAcceleration * 0.006);
+    pitchAngle = (pitchAngle * 0.95) + (anglePitchAcceleration * 0.05);
+    rollAngle = (rollAngle * 0.95) + (angleRollAcceleration * 0.05);
     // a way to prevent the extra noise from the vibrations of the escs
     // will subtract from the pitch and roll setpoint
     // the bigger the angle, the harder the drone will fight back to get back to position
@@ -686,6 +690,8 @@ void readData(){
   gyroArr[1] = g.gyro.y;
   gyroArr[2] = g.gyro.z;
   gyroArr[3] = gyroResult;
+
+  //Serial.println(gyroArr[0]);
 
 }
 // kalman filter to filter out noise - do we need it for now?

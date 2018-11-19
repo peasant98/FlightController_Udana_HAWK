@@ -5,9 +5,9 @@
 #include <Wire.h>
 #include <SPI.h>
 #include <Servo.h>
-#include "..\resources\Adafruit_Sensor.h"
-#include "..\resources\Adafruit_LSM9DS1.h"
-#include "..\resources\Adafruit_LSM9DS1.cpp"
+#include "Adafruit_Sensor.h"
+#include "Adafruit_LSM9DS1.h"
+//#include "..\resources\Adafruit_LSM9DS1.cpp"
 #include <math.h>
 // written by Matthew Strong
 // Code for the Udana HAWK Drone
@@ -57,7 +57,7 @@ public:
   before the pid algorithm actually runs.
   */
 
-  int throttleEval(); // =
+  void throttleEval(); // =
   // post pid algorithm throttle check
 
   void angleAdjust();
@@ -142,6 +142,7 @@ private:
   bool autoLeveling, notCalibrating;
 
   // arrays to hold the data from the sensors of the drone at any time.
+
   float gyroArr[4] = {0,0,0,0};
   float accArr[4] = {0,0,0,0};
 

@@ -32,8 +32,8 @@ void setup(){
   connecting all of the necessary escs, so that
   the user is ready to interact with the drone.
   */
-}
 
+}
 
 // loop
 void loop(){
@@ -48,10 +48,10 @@ void loop(){
   udanaHawk.throttleEval();
   /* ensures that the resulting throttle to the drone
   isn't too high or too low for each esc
-  */
+
   udanaHawk.perform();
   // if notcalibrating and started, send the signals!
-  udanaHawk.angleAdjust();
+  udanaHawk.angleAdjust();*/
   /* after the remaining microsecond timer has elapsed,
   read the data again (will be applying Extended Kalman Filter later)
   and set the angle adjust to what is needed to stabilize the drone.
