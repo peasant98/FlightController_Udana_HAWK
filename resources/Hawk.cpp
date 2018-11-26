@@ -330,11 +330,14 @@ void Hawk::userInputHandler(){
     userInput = Serial.read();
     Serial.println(userInput, DEC);
     switch(userInput){
-
       case 113:
-        throttleValue+=4.0;
-        notCalibrating = true;
-        break;
+        if (startingCode){
+          throttleValue+=4.0;
+          notCalibrating = true;
+          break;
+
+        }
+
 
       case 119:
         throttleValue-=4.0;
@@ -397,22 +400,26 @@ void Hawk::userInputHandler(){
         break;
 
       case 48:
-        sendAll(absoluteLow);
-        notCalibrating = false;
-        anglePitch = anglePitchAcc;
-        angleRoll = angleRollAcc;
-        // conduct the testing and starting up the drone
+        if (!startingCode){
+          sendAll(absoluteLow);
+          notCalibrating = false;
+          anglePitch = anglePitchAcc;
+          angleRoll = angleRollAcc;
+          // conduct the testing and starting up the drone
+          startingCode = 1;
+          //startingCode = 1;
+          break;
 
-        delay(5000);
-        startingCode = 1;
-        //startingCode = 1;
-        break;
+        }
+
 
       case 49:
+      if (!startingCode){
         sendAll(absoluteHigh);
         notCalibrating = false;
         break;
 
+      }
     }
   }
 }
@@ -444,7 +451,7 @@ void Hawk::edgesCheck(){
   /* make sure the values from userInputHandler()
   are valid and within bounds
   */
-  if(notCalibrating and startingCode){
+  if(notCalibrating && startingCode){
     // the drone must be at the startingCode of 1 to be able to be written a pulse to
     if(prevThrottle == throttleValue){
       throttleValue = prevThrottle;

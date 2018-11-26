@@ -18,15 +18,12 @@
 // in order to have stabilize mode, need to keep track of the current angle of the drone
 
 
+bool safeMode = false;
 // important values for keePINg track of things
-
-float throttleValue, pitchValue, yawValue, rollValue;
-float angleRollAcc, anglePitchAcc, anglePitch, angleRoll;
-int highestThrottle = 1950;
 // p, i, and d settings for the roll
-float PgainRoll = 1.2;
+float PgainRoll = 3.1;
 float IgainRoll = 0.04;
-float DgainRoll = 3.5;
+float DgainRoll = 2.0;
 // the d gain value could increase - by too much - the sensitivity of the drone - need to account for this
 // maximum output of the controller
 int pidMaxRoll = 400;
@@ -42,9 +39,11 @@ int pidMaxPitch = pidMaxRoll;
 // p, i, and d settings for the yaw
 float PgainYaw = 4.0;
 float IgainYaw = 0.02;
-float DgainYaw = 0.0;
+float DgainYaw = 0.5;
 
-
+float throttleValue, pitchValue, yawValue, rollValue;
+float angleRollAcc, anglePitchAcc, anglePitch, angleRoll;
+int highestThrottle = 1950;
 
 int rollAngle, pitchAngle, yawAngle;
 
@@ -53,7 +52,7 @@ int pidMaxYaw = pidMaxRoll;
 int accelerationX, accelerationY, accelerationZ, accelerationNet;
 int throttle;
 
-const float timerVal = (0.00204081632);
+const float timerVal = (0.01);
 // timer val
 float batteryVoltage;
 float pidErrorTemp;
@@ -83,7 +82,42 @@ void displayInstructions();
 void readData();
 void calibrateESC();
 void gyroCalibrations();
-void routine();
+void pidTuning();
+
+void setUpSensors(){
+  // setting up acceleration, magnetism and gyro
+  lsm.setupAccel(lsm.LSM9DS1_ACCELRANGE_2G);
+  //lsm.setupAccel(lsm.LSM9DS1_ACCELRANGE_4G);
+  //lsm.setupAccel(lsm.LSM9DS1_ACCELRANGE_8G);
+  //lsm.setupAccel(lsm.LSM9DS1_ACCELRANGE_16G);
+  // 2.) Set the magnetometer sensitivity
+  lsm.setupMag(lsm.LSM9DS1_MAGGAIN_4GAUSS);
+  //lsm.setupMag(lsm.LSM9DS1_MAGGAIN_8GAUSS);
+  //lsm.setupMag(lsm.LSM9DS1_MAGGAIN_12GAUSS);
+  //lsm.setupMag(lsm.LSM9DS1_MAGGAIN_16GAUSS);
+  // max dps is 24
+  lsm.setupGyro(lsm.LSM9DS1_GYROSCALE_245DPS);
+  //lsm.setupGyro(lsm.LS  M9DS1_GYROSCALE_500DPS);
+  //lsm.setupGyro(lsm.LSM9DS1_GYROSCALE_2000DPS);
+  //PINMode(LED3, OUTPUT);
+  //pinMode(LED2, OUTPUT);
+  //pinMode(LED1, OUTPUT);
+  //pinMode(LED0, OUTPUT);
+}
+
+void zeroes(){
+  startingCode = 0;
+  throttleValue = 1000.0;
+  pitchValue = 0.0;
+  yawValue = 0.0;
+  rollValue = 0.0;
+  // setting all of the intermediate values to calculate the pitch, roll, yaw, and throttle
+  // need to calibrate the gyros when the drone is stationary
+  // must be stationary or the drone will not work!!!
+  rollCalibration = 0;
+  pitchCalibration = 0;
+  yawCalibration = 0;
+}
 
 unsigned int calcTimeSpan(int freq);
 
@@ -108,36 +142,8 @@ void setup() {
   }
   else{
 
-    // setting up acceleration, magnetism and gyro
-    lsm.setupAccel(lsm.LSM9DS1_ACCELRANGE_2G);
-    //lsm.setupAccel(lsm.LSM9DS1_ACCELRANGE_4G);
-    //lsm.setupAccel(lsm.LSM9DS1_ACCELRANGE_8G);
-    //lsm.setupAccel(lsm.LSM9DS1_ACCELRANGE_16G);
-    // 2.) Set the magnetometer sensitivity
-    lsm.setupMag(lsm.LSM9DS1_MAGGAIN_4GAUSS);
-    //lsm.setupMag(lsm.LSM9DS1_MAGGAIN_8GAUSS);
-    //lsm.setupMag(lsm.LSM9DS1_MAGGAIN_12GAUSS);
-    //lsm.setupMag(lsm.LSM9DS1_MAGGAIN_16GAUSS);
-    // max dps is 24
-    lsm.setupGyro(lsm.LSM9DS1_GYROSCALE_245DPS);
-    //lsm.setupGyro(lsm.LS  M9DS1_GYROSCALE_500DPS);
-    //lsm.setupGyro(lsm.LSM9DS1_GYROSCALE_2000DPS);
-    //PINMode(LED3, OUTPUT);
-    //pinMode(LED2, OUTPUT);
-    //pinMode(LED1, OUTPUT);
-    //pinMode(LED0, OUTPUT);
-    startingCode = 0;
-    throttleValue = 1000.0;
-    pitchValue = 0.0;
-    yawValue = 0.0;
-    rollValue = 0.0;
-    // setting all of the intermediate values to calculate the pitch, roll, yaw, and throttle
-    // need to calibrate the gyros when the drone is stationary
-    // must be stationary or the drone will not work!!!
-    rollCalibration = 0;
-    pitchCalibration = 0;
-    yawCalibration = 0;
-
+    setUpSensors();
+    zeroes();
     //Serial.println("Calibrating all of the gyro values to zero. Please have the drone stationary.");
 
     gyroCalibrations();
@@ -146,19 +152,32 @@ void setup() {
     // will account for this as the drone is moving
     // getting the averages of everything thus far
     esc1.attach(11, MIN_PULSE_LENGTH, MAX_PULSE_LENGTH);
+    // a, fr
     esc2.attach(9, MIN_PULSE_LENGTH, MAX_PULSE_LENGTH);
+    // b rr
     esc3.attach(10, MIN_PULSE_LENGTH, MAX_PULSE_LENGTH);
+    // c rl
     esc4.attach(12, MIN_PULSE_LENGTH, MAX_PULSE_LENGTH);
+    // a fl
+    /*
+
+    esc1.attach(11, MIN_PULSE_LENGTH, MAX_PULSE_LENGTH);
+    // b, fr
+    esc2.attach(9, MIN_PULSE_LENGTH, MAX_PULSE_LENGTH);
+    // c rr
+    esc3.attach(10, MIN_PULSE_LENGTH, MAX_PULSE_LENGTH);
+    // d rl
+    esc4.attach(12, MIN_PULSE_LENGTH, MAX_PULSE_LENGTH);
+    // a fl
+
+    */
     // now for calbrating and arming the escs (one still doesn't work..)
     //calibrateESC();
     // requires the user to plug in the battery10
     // will allow the drone to be properly calibrated.
-    // after this and the user has plugged in the drone we will be ready to begin
-    // startingCode reset to account for this
 
     // comment out displayInstructions() function when testing keyboard input on Rasbperry Pi.
     //displayInstructions();
-
     startingCode = 0;
     // since the drone has not been started or calibrated at all yet
     //batteryVoltage = (analogRead(0) + 65) * 1.2317;
@@ -167,15 +186,14 @@ void setup() {
     yawAngle = 0;
     pitchAdjust = 0;
     rollAdjust = 0;
-    del = calcTimeSpan(490);
+    del = calcTimeSpan(100);
     timerDrone = micros();
     // type of micros is unsigned long here
     // amount in the battery
     // all steps before doing anything
   }
 }
-void displayInstructions()
-{
+void displayInstructions(){
     Serial.println("Welcome to the Udana HAWK Serial Console!");
     Serial.println("");
     Serial.println("Choose an Option:");
@@ -188,11 +206,13 @@ void displayInstructions()
     Serial.println("E - Up the Roll");
     Serial.println("R - Down the Roll");
     Serial.println("O - Stop the Drone (Don't do this in midair!)");
+    Serial.println("N - Go into Safe Mode");
+    Serial.println("M - Exit Safe Mode - the Drone will be Calibrated.");
+    Serial.println("T - Complete Terminate");
     Serial.println("P - Go, get the drone to begin again");
     Serial.println("0 : Send min throttle");
     Serial.println("1 : Send max throttle");
 }
-
 
 // pid algorithm: once we have the desired user inputs we can calculate what pulse we must send to each of the motors
 // the input for the function will be in degrees per second
@@ -255,7 +275,7 @@ void findPID(){
     iMemYaw = (pidMaxYaw*-1);
   }
   //this is is affected a lot
-  pidYawOutput = PgainYaw * pidErrorTemp + iMemPitch + DgainYaw * (pidErrorTemp - pidLastYaw_D_Error);
+  pidYawOutput = PgainYaw * pidErrorTemp + iMemYaw + DgainYaw * (pidErrorTemp - pidLastYaw_D_Error);
   if(pidYawOutput > pidMaxYaw){
     pidYawOutput = pidMaxYaw;
   }
@@ -267,6 +287,15 @@ void findPID(){
   // pidYawOutput
   // pidRollOutput
   // pidPitchOutput
+
+  //print out results here for the Raspberry Pi
+  //.....
+
+  // to be read by the pi...
+  Serial.print(pidRollOutput); Serial.print(" ");
+  Serial.print(pidPitchOutput); Serial.print(" ");
+  Serial.print(pidYawOutput);
+  Serial.println();
 }
 //Calculate the pulse for esc 1 (front-right - CCW)
 // my case: esc B
@@ -284,10 +313,6 @@ void findPID(){
 // my case: esc A
 // PIN 12
 
-  // the refresh rate of the 30A BLD escs is 50 - 60 Hz
-  //escs need pulse every 1/50 = 20ms
-  // higher refresh rate - 60  - 1/60 -> 16.6ms -> 17 ms
-  // take higher value because of the uncertainty of the values, less cycles per second
 void sendUnison(int uniValue){
   esc1.writeMicroseconds(uniValue);
   esc2.writeMicroseconds(uniValue);
@@ -308,7 +333,7 @@ float decrementAbsValue(float previous, float toChange){
   return toChange;
 }
 
-void loop() {
+void manualPerformance(){
   float prevThrottle = throttleValue;
   float prevPitch = pitchValue;
   float prevYaw = yawValue;
@@ -317,16 +342,20 @@ void loop() {
   // serial will be available with the raspberry pi
   if (Serial.available()) {
         data = Serial.read();
-        Serial.println(data, DEC);
-        // switch statement more effective than numerous if statements
+        //Serial.println(data, DEC);
         switch (data){
+          case 116:
+            // complete termination
+            sendUnison(MIN_PULSE_LENGTH);
+            startingCode = 0;
+
           case 113:
-            throttleValue+=4.0;
+            throttleValue+=1.0;
             notCalibrating = true;
             break;
 
           case 119:
-            throttleValue-=4.0;
+            throttleValue-=1.0;
             notCalibrating = true;
             break;
 
@@ -349,6 +378,15 @@ void loop() {
             yawValue-=25.0;
             notCalibrating = true;
             break;
+          case 110:
+            // case n, enter safe mode
+            safeMode = true;
+            notCalibrating = true;
+
+          case 109:
+            // case m, exit safe mode;
+            safeMode = false;
+            notCalibrating = true;
 
           case 101:
             rollValue+=25.0;
@@ -367,7 +405,6 @@ void loop() {
               startingCode = 0;
             }
             break;
-
           case 112:
             if(!startingCode){
               calibrateESC();
@@ -384,31 +421,31 @@ void loop() {
               startingCode = 1;
             }
             break;
-
           case 48:
-            sendUnison(MIN_PULSE_LENGTH);
-            notCalibrating = false;
-            anglePitch = anglePitchAcc;
-            angleRoll = angleRollAcc;
-            // conduct the testing and starting up the drone
-
-            //delay(5000);
-
-
-            startingCode = 1;
-            //startingCode = 1;
-            break;
-
+            if (!startingCode){
+              sendUnison(MIN_PULSE_LENGTH);
+              notCalibrating = false;
+              anglePitch = anglePitchAcc;
+              angleRoll = angleRollAcc;
+              // conduct the testing and starting up the drone
+              //delay(5000);
+              startingCode = 1;
+              // setting the starting code to 1 to allow the drone to begin
+              break;
+            }
           case 49:
-            sendUnison(MAX_PULSE_LENGTH);
-            notCalibrating = false;
-            break;
+            if (!startingCode){
+              sendUnison(MAX_PULSE_LENGTH);
+              notCalibrating = false;
+              break;
+
+            }
         }
         // roll - x
         // pitch - y
         // yaw - z, user can increment or decrement these values
     }
-    if(notCalibrating and startingCode){
+    if(notCalibrating && startingCode){
       // the drone must be at the startingCode of 1 to be able to be written a pulse to
       if(prevThrottle == throttleValue){
         throttleValue = prevThrottle;
@@ -459,10 +496,7 @@ void loop() {
       rollSetpoint = rollValue;
     }
     // pid input should be in degrees per second, gyro goes to +- 245 dp
-    /*
-    pitchSetpoint = pitchSetpoint - pitchAdjust;
-    rollSetpoint = rollSetpoint - rollAdjust;
-    */
+
     // input is subtracted from what the roll is expected at the stationary surface; that is, when all axes are at 0 ....
     rollInputGyro = gyroArr[0] - rollCalibration;
     // actual data read in from the roll
@@ -470,9 +504,7 @@ void loop() {
     // actual data read in from the pitch
     yawInputGyro = gyroArr[2] - yawCalibration;
     // actual data read in from the yaw
-
     // need some actual accurate reading while calculating the roll setpoint
-
     // rollSetpoint is (500-)
     pitchSetpoint -= pitchAdjust;
     // pitchSetpoint is desired user value - adjusted pitch
@@ -497,7 +529,6 @@ void loop() {
         throttle = highestThrottle;
       }
       // when the drone is stationary need to account for that error...
-
         //Calculate the pulse for esc 1 (front-right - CCW), PIN 11, esc C
         esc1Value = throttle - pidPitchOutput + pidRollOutput - pidYawOutput;
         //Calculate the pulse for esc 2 (rear-right - CW), PIN 9, esc B
@@ -551,10 +582,15 @@ void loop() {
     if(notCalibrating && startingCode){
       // when the escs are being calibrated, we don't want to execute this line of code.
       // otherwise write the desired throttle output to the escs
-      esc1.writeMicroseconds(esc1Value);
-      esc2.writeMicroseconds(esc2Value);
-      esc3.writeMicroseconds(esc3Value);
-      esc4.writeMicroseconds(esc4Value);
+      if(safeMode){
+        sendUnison(1000);
+      }
+      else{
+        esc1.writeMicroseconds(esc1Value);
+        esc2.writeMicroseconds(esc2Value);
+        esc3.writeMicroseconds(esc3Value);
+        esc4.writeMicroseconds(esc4Value);
+      }
     }
     //delay(200); // just a simple delay, will need microsecond timer later
     while(micros() - timerDrone <= del);
@@ -612,6 +648,11 @@ void loop() {
     }
 */
 }
+
+void loop() {
+  manualPerformance();
+
+}
 void gyroCalibrations(){
   rollCalibration = 0;
   pitchCalibration = 0;
@@ -632,7 +673,6 @@ void gyroCalibrations(){
   // finds the calibration when the gyro is completely still
 }
 
-
 void calibrateESC(){
   sendUnison(MAX_PULSE_LENGTH);
   //Serial.print("Preparing to send min pulse for arming sequence... Plug in the battery now.");
@@ -644,8 +684,7 @@ void calibrateESC(){
   startingCode = 1;
 }
 // a simple testing function to go from the minimum to maximum pulse length
-void test()
-{
+void test(){
   // occurs after the drone's escs are calibrated.
   // pulse of 1000 to 1400,intervals of 10
     for (int i = MIN_PULSE_LENGTH; i <= 1400; i += 10) {
@@ -696,21 +735,9 @@ void readData(){
 }
 // kalman filter to filter out noise - do we need it for now?
 
-
-
-void routine(){
-  // to write: will write a straightforward function that performs a rudimentary
-  // flight routine where once this function is started, the drone will fly up a little bit and then down
- // will later not be needed, for testing purposes currently.
-
- // start Drone, calibrate everything
-
- // begin hovering for s seconds at altitude a
-
- // lower back down to the ground after this.
-
+void pidTuning(){
+  // a file for tuning the pid.
 }
-
 unsigned int calcTimeSpan(int hz){
   return ((1/hz) * 1000000);
 }
